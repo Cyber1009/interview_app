@@ -1,4 +1,12 @@
-// src/components/LoadingOverlay.js
+/**
+ * Loading Overlay Component
+ * Provides:
+ * - Fullscreen loading indicator
+ * - Backdrop management
+ * - Loading state visualization
+ * - Z-index handling for modal display
+ */
+
 import React from 'react';
 import { Backdrop, CircularProgress } from '@mui/material';
 

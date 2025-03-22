@@ -1,3 +1,10 @@
+# Web Crawler Configuration
+# Controls:
+# - Search engine crawling
+# - Site indexing rules
+# - Access permissions
+# - SEO directives
+
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:

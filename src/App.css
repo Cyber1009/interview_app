@@ -1,3 +1,12 @@
+/**
+ * Core Application Styles
+ * Provides:
+ * - Base application styling
+ * - Video container styles
+ * - Common utility classes
+ * - Cross-browser compatibility fixes
+ */
+
 /* Common styles */
 .App {
   text-align: center;

@@ -1,3 +1,13 @@
+/**
+ * Global CSS Styles
+ * Defines:
+ * - CSS variables for theming
+ * - Base element styles
+ * - Font configurations
+ * - Global transitions
+ * - CSS reset and normalization
+ */
+
 :root {
   --primary: #1976d2;
   --secondary: #dc004e;

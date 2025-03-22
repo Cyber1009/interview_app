@@ -1,3 +1,11 @@
+/**
+ * Application Test Suite
+ * Contains:
+ * - Basic application rendering tests
+ * - Component smoke tests
+ * - Integration test setup
+ */
+
 import { render, screen } from '@testing-library/react';
 import App from './App';
 

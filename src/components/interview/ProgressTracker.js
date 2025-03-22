@@ -1,3 +1,12 @@
+/**
+ * Progress Tracker Component
+ * Provides:
+ * - Visual interview progress indicator
+ * - Question count tracking
+ * - Practice session indication
+ * - Progress percentage calculation
+ */
+
 import React from 'react';
 import { Box, Typography, LinearProgress } from '@mui/material';
 

@@ -1,3 +1,12 @@
+/**
+ * Timer Component
+ * Manages:
+ * - Preparation countdown display
+ * - Recording time tracking
+ * - Visual time indicators
+ * - Timer state management
+ */
+
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';

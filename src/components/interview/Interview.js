@@ -1,3 +1,13 @@
+/**
+ * Main Interview Component
+ * Handles the core interview process including:
+ * - Video recording and playback
+ * - Question progression
+ * - Timer management
+ * - Practice and actual interview sessions
+ * - Response review
+ */
+
 // src/components/Interview.js
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

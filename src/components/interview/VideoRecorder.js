@@ -1,3 +1,13 @@
+/**
+ * Video Recorder Component
+ * Handles video recording functionality:
+ * - Camera stream management
+ * - Recording controls
+ * - Timer display
+ * - Recording status indicators
+ * - Video preview rendering
+ */
+
 import React, { useRef } from 'react';
 import { Box, Typography, Button, CircularProgress, LinearProgress } from '@mui/material';
 import { FiberManualRecord, Stop } from '@mui/icons-material';

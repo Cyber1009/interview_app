@@ -1,3 +1,12 @@
+/**
+ * Theme Switcher Component
+ * Provides:
+ * - Theme selection interface
+ * - Real-time theme preview
+ * - Theme persistence
+ * - Custom theme management
+ */
+
 // src/components/ThemeSwitcher.js
 import React, { useState } from 'react';
 import {
@@ -10,7 +19,7 @@ import {
   Box,
 } from '@mui/material';
 import { Palette } from '@mui/icons-material';
-import { themeConfigs } from '../../styles/themeConfigs';
+import { themeConfigs } from '../../styles/theme';  // Updated import path
 
 const ThemeSwitcher = ({ currentTheme, onThemeChange }) => {
   const [anchorEl, setAnchorEl] = useState(null);

@@ -4,6 +4,16 @@ import { validateToken } from '../../utils/tokenGenerator';
 import { Box, TextField, Button, Typography, Paper, Container } from '@mui/material';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
+/**
+ * Interview Access Component
+ * Handles:
+ * - Access token validation
+ * - Interview entry control
+ * - Token status management
+ * - Error handling for invalid tokens
+ * - Navigation to interview after successful validation
+ */
+
 const InterviewAccess = () => {
     const [token, setToken] = useState('');
     const [error, setError] = useState('');

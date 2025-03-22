@@ -1,28 +1,25 @@
+/**
+ * Main Application Component
+ * Serves as the root component and handles:
+ * - Application routing configuration
+ * - Theme provider setup and management
+ * - Protected route implementations
+ * - Component lazy loading
+ */
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import AdminPanel from './components/admin/AdminPanel';
-import Welcome from './components/interview/Welcome';
-import Instructions from './components/interview/Instructions';
-import Interview from './components/interview/Interview';
-import ThankYou from './components/interview/ThankYou';
-import InterviewAccess from './components/interview/InterviewAccess';
-import CameraPermissions from './components/CameraPermissions';
-
-// Add ProtectedRoute component
-const ProtectedRoute = ({ children }) => {
-  const hasPermissions = sessionStorage.getItem('cameraPermissionsGranted') === 'true';
-  
-  if (!hasPermissions) {
-    return <CameraPermissions 
-      onPermissionsGranted={() => {
-        sessionStorage.setItem('cameraPermissionsGranted', 'true');
-      }}
-    />;
-  }
-
-  return children;
-};
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import {
+  AdminPanel,
+  Welcome,
+  Instructions,
+  Interview,
+  ThankYou,
+  InterviewAccess,
+  CameraPermissions,
+  ProtectedRoute
+} from './components';
 
 function App() {
   const [theme, setTheme] = React.useState(() => {

@@ -1,3 +1,13 @@
+/**
+ * Welcome Component
+ * Provides:
+ * - Initial landing page
+ * - Interview process overview
+ * - Environment preparation guidance
+ * - Navigation to interview access
+ * - First-time user orientation
+ */
+
 // src/components/Welcome.js
 import React from 'react';
 import { useNavigate } from 'react-router-dom';

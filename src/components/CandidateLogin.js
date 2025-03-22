@@ -1,3 +1,12 @@
+/**
+ * Candidate Login Component
+ * Handles:
+ * - Candidate authentication
+ * - Login form management
+ * - Interview access validation
+ * - Navigation after successful login
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 

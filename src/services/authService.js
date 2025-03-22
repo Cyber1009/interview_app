@@ -1,3 +1,13 @@
+/**
+ * Authentication Service
+ * Manages all authentication-related functionality:
+ * - User session management
+ * - Token-based authentication
+ * - Role-based access control
+ * - API request interceptors for auth headers
+ * - Token refresh mechanism
+ */
+
 import { AUTH_CONFIG } from '../utils/auth';
 import axios from 'axios';
 

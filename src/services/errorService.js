@@ -1,3 +1,12 @@
+/**
+ * Error Handling Service
+ * Provides centralized error handling including:
+ * - Error logging and tracking
+ * - Context-aware error messages
+ * - Error history management
+ * - Production error reporting
+ */
+
 class ErrorService {
   constructor() {
     this.errors = [];

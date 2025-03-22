@@ -1,4 +1,10 @@
 // src/components/Instructions.js
+/**
+ * Instructions Component
+ * Displays interview process instructions and steps
+ * Handles camera permissions before starting the interview
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,8 +26,9 @@ import {
   Preview,
   CheckCircle,
   ArrowForward,
+  VideocamOff,
 } from '@mui/icons-material';
-import CameraPermissions from '../CameraPermissions';
+import CameraPermissions from '../shared/CameraPermissions';
 
 function Instructions() {
   const navigate = useNavigate();
@@ -30,28 +37,34 @@ function Instructions() {
 
   const steps = [
     {
+      label: 'Practice Session',
+      icon: <VideocamOff />,
+      description: 'Start with a practice question to get comfortable with the format and test your equipment.',
+      tip: 'This is a safe space to familiarize yourself with the recording process.'
+    },
+    {
       label: 'Preparation Time',
       icon: <Timer />,
-      description: 'You will have 30 seconds to prepare before each question. Use this time to gather your thoughts.',
+      description: 'Before each question, you\'ll have preparation time to gather your thoughts.',
       tip: 'You can start recording early if you feel ready before the preparation time ends.'
     },
     {
       label: 'Recording Your Answer',
       icon: <Videocam />,
-      description: 'You will have 3 minutes to record your answer. The recording will start automatically after preparation time.',
-      tip: 'Speak clearly and maintain eye contact with the camera.'
+      description: 'After preparation time ends, recording will start automatically. Focus on delivering your answer clearly.',
+      tip: 'Maintain eye contact with the camera and speak at a steady pace.'
     },
     {
       label: 'Review Your Response',
       icon: <Preview />,
-      description: 'After recording, you can review your answer and choose to re-record if needed.',
-      tip: 'Make sure your response is audible and visible in the preview.'
+      description: 'After recording, you can review your answer. During the practice question, you\'ll have the option to re-record.',
+      tip: 'Check both video and audio quality in your recording.'
     },
     {
       label: 'Complete the Interview',
       icon: <CheckCircle />,
-      description: 'Proceed through all questions at your own pace.',
-      tip: 'Take brief pauses between questions if needed.'
+      description: 'Progress through all questions at your own pace. Each question follows the same format.',
+      tip: 'Take brief pauses between questions if needed to stay focused.'
     }
   ];
 

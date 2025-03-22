@@ -16,6 +16,15 @@ import {
 } from '@mui/icons-material';
 // import theme from '../styles/theme';
 
+/**
+ * Thank You Component
+ * Displays:
+ * - Interview completion message
+ * - Next steps information
+ * - Return to home option
+ * - Success animations and feedback
+ */
+
 function ThankYou() {
   const navigate = useNavigate();
 

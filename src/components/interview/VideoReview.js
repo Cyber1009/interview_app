@@ -1,3 +1,12 @@
+/**
+ * Video Review Component
+ * Handles:
+ * - Recorded video playback
+ * - Re-recording options for practice questions
+ * - Video review confirmation
+ * - Transition to next questions
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Dialog,

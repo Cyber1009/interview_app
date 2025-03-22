@@ -1,3 +1,10 @@
+# Version Control Ignore Rules
+# Specifies:
+# - Files to exclude from version control
+# - Build artifacts to ignore
+# - Environment-specific files
+# - Dependency directories
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies

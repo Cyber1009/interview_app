@@ -1,3 +1,12 @@
+/**
+ * Camera Permissions Component
+ * Handles:
+ * - Camera and microphone access requests
+ * - Permission status tracking
+ * - Device compatibility checks
+ * - User guidance for permissions
+ */
+
 import React, { useState } from 'react';
 import { Box, Typography, Button, CircularProgress, Paper, Container } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -14,20 +23,16 @@ const CameraPermissions = ({ onPermissionsGranted }) => {
       setChecking(true);
       setError('');
 
-      // Immediately request permissions - this will trigger the browser permission dialog
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
 
-      // If we get here, permissions were granted
       setCameraPermission(true);
       setMicrophonePermission(true);
       
-      // Clean up the test stream
       stream.getTracks().forEach(track => track.stop());
-
-      // Signal success after a short delay to allow state updates
+      
       setTimeout(() => {
         onPermissionsGranted();
       }, 500);
@@ -36,12 +41,10 @@ const CameraPermissions = ({ onPermissionsGranted }) => {
       console.error('Permission error:', error);
       setCameraPermission(false);
       setMicrophonePermission(false);
-
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        setError('Please allow camera and microphone access and try again');
-      } else {
-        setError('Camera or microphone not available. Please check your device settings.');
-      }
+      setError(error.name === 'NotAllowedError' ? 
+        'Please allow camera and microphone access and try again' : 
+        'Camera or microphone not available. Please check your device settings.'
+      );
     } finally {
       setChecking(false);
     }
@@ -64,22 +67,17 @@ const CameraPermissions = ({ onPermissionsGranted }) => {
           <Typography component="li">If denied, click the camera icon in your browser's address bar to enable</Typography>
         </Box>
 
+        {/* Permission status indicators */}
         <Box sx={{ mt: 3, mb: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <VideocamIcon 
-              color={cameraPermission ? 'success' : 'error'} 
-              sx={{ mr: 1 }} 
-            />
+            <VideocamIcon color={cameraPermission ? 'success' : 'error'} sx={{ mr: 1 }} />
             <Typography>
               Camera: {cameraPermission ? 'Allowed ✓' : 'Access needed ✗'}
             </Typography>
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <MicIcon 
-              color={microphonePermission ? 'success' : 'error'} 
-              sx={{ mr: 1 }} 
-            />
+            <MicIcon color={microphonePermission ? 'success' : 'error'} sx={{ mr: 1 }} />
             <Typography>
               Microphone: {microphonePermission ? 'Allowed ✓' : 'Access needed ✗'}
             </Typography>
@@ -98,7 +96,7 @@ const CameraPermissions = ({ onPermissionsGranted }) => {
               variant="contained"
               onClick={checkPermissions}
               size="large"
-              startIcon={checking ? <CircularProgress size={20} /> : null}
+              startIcon={checking ? <CircularProgress size={20} color="inherit" /> : null}
               disabled={checking}
               sx={{ px: 4, py: 1.5 }}
             >
