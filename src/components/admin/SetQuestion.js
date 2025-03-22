@@ -1,13 +1,30 @@
 import React, { useState } from 'react';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import {
-  Box, Typography, TextField, Button, List, ListItem, 
+  Box, Typography, TextField, Button, List,
   IconButton, Paper, Grid, Card, CardHeader, CardContent
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { Add as AddIcon, Delete as DeleteIcon, 
-  KeyboardArrowUp as UpIcon, KeyboardArrowDown as DownIcon,
-  AccessTime, Videocam 
-} from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+
+// Add StrictModeDroppable component for React 18 compatibility
+const StrictModeDroppable = ({ children, ...props }) => {
+  const [enabled, setEnabled] = useState(false);
+  
+  React.useEffect(() => {
+    const animation = requestAnimationFrame(() => setEnabled(true));
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
+  }, []);
+
+  if (!enabled) {
+    return null;
+  }
+
+  return <Droppable {...props}>{children}</Droppable>;
+};
 
 const SetQuestion = () => {
   const [questions, setQuestions] = useState(() => {
@@ -37,27 +54,23 @@ const SetQuestion = () => {
     localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
   };
 
-  const moveQuestion = (index, direction) => {
-    if ((direction === 'up' && index === 0) || 
-        (direction === 'down' && index === questions.length - 1)) return;
-
-    const newQuestions = [...questions];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    // Swap questions
-    [newQuestions[index], newQuestions[targetIndex]] = 
-    [newQuestions[targetIndex], newQuestions[index]];
-    
-    setQuestions(newQuestions);
-    localStorage.setItem('interviewQuestions', JSON.stringify(newQuestions));
-  };
-
   const handleUpdateTiming = (id, field, value) => {
     const updatedQuestions = questions.map(q => 
       q.id === id ? { ...q, [field]: parseInt(value) || 0 } : q
     );
     setQuestions(updatedQuestions);
     localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(questions);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setQuestions(items);
+    localStorage.setItem('interviewQuestions', JSON.stringify(items));
   };
 
   return (
@@ -181,102 +194,107 @@ const SetQuestion = () => {
           }}
         />
         <CardContent sx={{ p: 2.5 }}>
-          <List sx={{ '& > :not(:last-child)': { mb: 2 } }}>
-            {questions.map((question, index) => (
-              <Paper 
-                key={question.id} 
-                elevation={0} 
-                sx={{ 
-                  mb: 2, 
-                  p: 3, 
-                  border: '1px solid', 
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  transition: 'transform 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                  }
-                }}
-              >
-                <Grid container spacing={3} alignItems="center">
-                  <Grid item xs={12} md={6}>
-                    <TextField 
-                      fullWidth 
-                      value={question.text}
-                      onChange={(e) => {
-                        const updatedQuestions = questions.map(q =>
-                          q.id === question.id ? { ...q, text: e.target.value } : q
-                        );
-                        setQuestions(updatedQuestions);
-                        localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
-                      }}
-                      multiline
-                    />
-                  </Grid>
-                  <Grid item xs={6} md={2}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Prep Time"
-                      value={question.preparationTime}
-                      onChange={(e) => handleUpdateTiming(question.id, 'preparationTime', e.target.value)}
-                      InputProps={{
-                        endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={6} md={2}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Record Time"
-                      value={question.recordingTime}
-                      onChange={(e) => handleUpdateTiming(question.id, 'recordingTime', e.target.value)}
-                      InputProps={{
-                        endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={2} sx={{ 
-                    display: 'flex', 
-                    gap: 1, 
-                    justifyContent: 'flex-end',
-                    alignItems: 'center'
-                  }}>
-                    <IconButton 
-                      onClick={() => moveQuestion(index, 'up')} 
-                      disabled={index === 0}
-                      size="small"
-                      sx={{ 
-                        color: 'action.active',
-                        '&:disabled': { color: 'action.disabled' }
-                      }}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <StrictModeDroppable droppableId="questions">
+              {(provided) => (
+                <List 
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  sx={{ '& > :not(:last-child)': { mb: 2 } }}
+                >
+                  {questions.map((question, index) => (
+                    <Draggable 
+                      key={question.id.toString()} 
+                      draggableId={question.id.toString()} 
+                      index={index}
                     >
-                      <UpIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => moveQuestion(index, 'down')} 
-                      disabled={index === questions.length - 1}
-                      size="small"
-                      sx={{ 
-                        color: 'action.active',
-                        '&:disabled': { color: 'action.disabled' }
-                      }}
-                    >
-                      <DownIcon />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => handleDeleteQuestion(question.id)} 
-                      color="error"
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Grid>
-                </Grid>
-              </Paper>
-            ))}
-          </List>
+                      {(provided, snapshot) => (
+                        <Paper 
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          elevation={snapshot.isDragging ? 2 : 0}
+                          sx={{ 
+                            mb: 2, 
+                            p: 3, 
+                            border: '1px solid', 
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                            cursor: 'move',
+                            '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: (theme) => `0 4px 8px ${alpha(theme.palette.common.black, 0.1)}`
+                            },
+                            ...(snapshot.isDragging && {
+                              background: (theme) => alpha(theme.palette.primary.main, 0.05)
+                            })
+                          }}
+                        >
+                          <Box {...provided.dragHandleProps} sx={{ width: '100%' }}>
+                            <Grid container spacing={3} alignItems="center">
+                              <Grid item xs={12} md={6}>
+                                <TextField 
+                                  fullWidth 
+                                  value={`Q${index + 1}. ${question.text}`}
+                                  onChange={(e) => {
+                                    const text = e.target.value.replace(/^Q\d+\.\s*/, '');
+                                    const updatedQuestions = questions.map(q =>
+                                      q.id === question.id ? { ...q, text: text } : q
+                                    );
+                                    setQuestions(updatedQuestions);
+                                    localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
+                                  }}
+                                  multiline
+                                />
+                              </Grid>
+                              <Grid item xs={6} md={2}>
+                                <TextField
+                                  fullWidth
+                                  type="number"
+                                  label="Prep Time"
+                                  value={question.preparationTime}
+                                  onChange={(e) => handleUpdateTiming(question.id, 'preparationTime', e.target.value)}
+                                  InputProps={{
+                                    endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={6} md={2}>
+                                <TextField
+                                  fullWidth
+                                  type="number"
+                                  label="Record Time"
+                                  value={question.recordingTime}
+                                  onChange={(e) => handleUpdateTiming(question.id, 'recordingTime', e.target.value)}
+                                  InputProps={{
+                                    endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={2} sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-end',
+                                alignItems: 'center'
+                              }}>
+                                <IconButton 
+                                  onClick={() => handleDeleteQuestion(question.id)} 
+                                  color="error"
+                                  size="small"
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Grid>
+                            </Grid>
+                          </Box>
+                        </Paper>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </List>
+              )}
+            </StrictModeDroppable>
+          </DragDropContext>
         </CardContent>
       </Card>
     </Box>

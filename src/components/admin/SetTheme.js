@@ -16,6 +16,7 @@ import {
 import { Upload as UploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { alpha, createTheme } from '@mui/material/styles';
 import { themeConfigs } from '../../styles/theme';  // Updated import path
+import { extractColors } from '../../utils/colorExtractor';
 
 const SetTheme = ({ onThemeChange, logo, onLogoChange }) => {
   const [themeColors, setThemeColors] = useState(() => {
@@ -44,6 +45,47 @@ const SetTheme = ({ onThemeChange, logo, onLogoChange }) => {
     localStorage.setItem('interviewTheme', JSON.stringify({
       palette: themeUpdate.palette
     }));
+  };
+
+  const handleLogoUpload = async (file) => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const logoDataUrl = e.target.result;
+        onLogoChange(logoDataUrl);
+        localStorage.setItem('companyLogo', logoDataUrl);
+
+        // Extract colors from the logo
+        try {
+          const colors = await extractColors(logoDataUrl);
+          const updatedColors = {
+            primary: colors.primary,
+            secondary: colors.secondary,
+            background: colors.background,
+            text: colors.text
+          };
+          
+          setThemeColors(updatedColors);
+          
+          const themeUpdate = createTheme({
+            palette: {
+              primary: { main: updatedColors.primary },
+              secondary: { main: updatedColors.secondary },
+              background: { default: updatedColors.background },
+              text: { primary: updatedColors.text }
+            }
+          });
+          
+          onThemeChange(themeUpdate);
+          localStorage.setItem('interviewTheme', JSON.stringify({
+            palette: themeUpdate.palette
+          }));
+        } catch (error) {
+          console.error('Error extracting colors:', error);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -149,13 +191,7 @@ const SetTheme = ({ onThemeChange, logo, onLogoChange }) => {
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (e) => {
-                                const logoDataUrl = e.target.result;
-                                onLogoChange(logoDataUrl);
-                                localStorage.setItem('companyLogo', logoDataUrl);
-                              };
-                              reader.readAsDataURL(file);
+                              handleLogoUpload(file);
                             }
                           }}
                         />
