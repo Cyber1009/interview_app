@@ -14,13 +14,18 @@ const ProgressTracker = ({
         sx={{ 
           height: 8, 
           borderRadius: 4,
-          bgcolor: (theme) => theme.palette.grey[200],
+          bgcolor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(255,255,255,0.05)' 
+            : 'rgba(0,0,0,0.05)',
           '& .MuiLinearProgress-bar': {
-            bgcolor: (theme) => theme.palette.primary.main
+            bgcolor: (theme) => isPracticeQuestion 
+              ? theme.palette.info.main
+              : theme.palette.primary.main,
+            transition: 'transform 0.4s ease-in-out'
           }
         }}
       />
-      <Typography variant="body2" sx={{ mt: 1, textAlign: 'right' }}>
+      <Typography variant="body2" sx={{ mt: 1, textAlign: 'right', color: 'text.secondary' }}>
         {isPracticeQuestion ? 'Practice Question' : 
           `Question ${currentQuestionIndex} of ${totalQuestions - 1}`}
       </Typography>

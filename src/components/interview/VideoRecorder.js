@@ -69,8 +69,9 @@ const VideoRecorder = ({
                 bgcolor: 'rgba(255,255,255,0.2)',
                 '& .MuiLinearProgress-bar': {
                   bgcolor: (theme) => isRecording 
-                    ? theme.palette.error.main
-                    : theme.palette.primary.main,
+                    ? theme.palette.secondary.main  // Changed from error.main to secondary.main
+                    : theme.palette.primary.light,  // Use primary.light for non-recording state
+                  transition: 'transform 0.1s linear'
                 }
               }}
             />
