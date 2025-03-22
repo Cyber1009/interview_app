@@ -5,6 +5,25 @@ export const AUTH_CONFIG = {
     EXPIRES_KEY: 'expiresAt',
     INTERVIEW_TOKEN: 'interviewToken'
   };
+
+export const AUTH_ENDPOINTS = {
+  LOGIN: '/api/auth/login',
+  REFRESH: '/api/auth/refresh',
+  LOGOUT: '/api/auth/logout'
+};
+
+export const AUTH_ERRORS = {
+  INVALID_CREDENTIALS: 'Invalid credentials',
+  SESSION_EXPIRED: 'Session expired',
+  UNAUTHORIZED: 'Unauthorized access',
+  NETWORK_ERROR: 'Network error occurred'
+};
+
+export const ROLES = {
+  ADMIN: 'admin',
+  INTERVIEWER: 'interviewer',
+  CANDIDATE: 'candidate'
+};
   
   export const setAuth = (token, role, expiresIn = 3600000) => { // default 1 hour
     localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);

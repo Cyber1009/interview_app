@@ -22,6 +22,10 @@ import {
   AccessTime,  // Add this import
 } from '@mui/icons-material';
 import VideoReview from './VideoReview';  // Update import
+import VideoRecorder from './VideoRecorder';
+import QuestionDisplay from './QuestionDisplay';
+import TimerComponent from './TimerComponent';
+import ProgressTracker from './ProgressTracker';
 
 const buttonSx = {
   px: 4,
@@ -374,186 +378,45 @@ function Interview() {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4,
-          bgcolor: (theme) => theme.palette.background.paper,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-        }}
-      >
-        <Box sx={{ mb: 4 }}>
-          <LinearProgress 
-            variant="determinate" 
-            // Update progress calculation to exclude practice question
-            value={(currentQuestionIndex / (questions.length - 1)) * 100}
-            sx={{ 
-              height: 8, 
-              borderRadius: 4,
-              bgcolor: (theme) => theme.palette.grey[200],
-              '& .MuiLinearProgress-bar': {
-                bgcolor: (theme) => theme.palette.primary.main
-              }
-            }}
-          />
-          <Typography variant="body2" sx={{ mt: 1, textAlign: 'right' }}>
-            {isPracticeQuestion ? 'Practice Question' : 
-              `Question ${currentQuestionIndex} of ${questions.length - 1}`}
-          </Typography>
-        </Box>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <ProgressTracker 
+          currentQuestionIndex={currentQuestionIndex}
+          totalQuestions={questions.length}
+          isPracticeQuestion={isPracticeQuestion}
+        />
 
-        <Card 
-          variant="outlined" 
-          sx={{ 
-            mb: 4,
-            border: '2px solid rgba(0,0,0,0.1)',
-            borderRadius: 4,
-            background: 'rgba(255,255,255,0.8)',
-          }}
-        >
-          <CardContent>
-            <Typography variant="h5" gutterBottom color="primary">
-              {renderQuestionHeader()}
-            </Typography>
-            
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 3, 
-              mt: 2,
-              p: 2,
-              bgcolor: 'rgba(0,0,0,0.02)',
-              borderRadius: 2
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AccessTime color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  Preparation Time: {formatTime(questions[currentQuestionIndex].preparationTime)}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AccessTime color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  Recording Time: {formatTime(questions[currentQuestionIndex].recordingTime)}
-                </Typography>
-              </Box>
-            </Box>
+        <QuestionDisplay 
+          currentQuestion={questions[currentQuestionIndex]}
+          isPracticeQuestion={isPracticeQuestion}
+          currentQuestionIndex={currentQuestionIndex}
+          formatTime={formatTime}
+        />
 
-            {isPreparing && (
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                mt: 2,
-                p: 2,
-                bgcolor: preparationTime <= 10 ? 'warning.light' : 'primary.light',
-                borderRadius: 2,
-                color: preparationTime <= 10 ? 'warning.main' : 'primary.main'
-              }}>
-                <Timer sx={{ mr: 1 }} />
-                <Box>
-                  <Typography variant="h6">
-                    Preparation Time Remaining: {formatTime(preparationTime)}
-                  </Typography>
-                  <Typography variant="body2">
-                    {preparationTime > 10 
-                      ? "You can start recording now or wait for automatic start"
-                      : "Recording will start automatically soon!"
-                    }
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+        <TimerComponent 
+          isPreparing={isPreparing}
+          preparationTime={preparationTime}
+          formatTime={formatTime}
+        />
 
-        <Box sx={{ position: 'relative', mb: 4 }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{
-              width: '100%',
-              height: '400px',
-              borderRadius: '16px',
-              backgroundColor: '#000',
-              objectFit: 'cover',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-            }}
-          />
-          {isRecording && (
-            <Box sx={{ mt: 2 }}>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min(100, ((questions[currentQuestionIndex].recordingTime - countdown) / questions[currentQuestionIndex].recordingTime) * 100)}
-                sx={{ 
-                  height: 10, 
-                  borderRadius: 5,
-                  bgcolor: (theme) => theme.palette.grey[200],
-                  '& .MuiLinearProgress-bar': {
-                    bgcolor: (theme) => theme.palette.primary.main
-                  }
-                }}
-              />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  mt: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  color: (theme) => theme.palette.text.secondary
-                }}
-              >
-                <CircularProgress 
-                  size={16} 
-                  thickness={6} 
-                  sx={{ color: (theme) => theme.palette.error.main }} 
-                />
-                Recording: {formatTime(countdown)}
-              </Typography>
-            </Box>
-          )}
-        </Box>
+        <VideoRecorder 
+          videoRef={videoRef}
+          isRecording={isRecording}
+          hasAnswered={hasAnswered}
+          isPreparing={isPreparing}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          countdown={countdown}
+          questionDuration={questions[currentQuestionIndex].recordingTime}
+          formatTime={formatTime}
+        />
 
-        <Box sx={{ 
-          textAlign: 'center',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 2,
-        }}>
-          {!isRecording && !hasAnswered ? (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<FiberManualRecord />}
-              onClick={startRecording}
-              size="large"
-              sx={buttonSx}
-            >
-              {isPreparing ? 'Start Recording Early' : 'Start Recording'}
-            </Button>
-          ) : isRecording ? (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<Stop />}
-              onClick={stopRecording}
-              size="large"
-              sx={buttonSx}
-            >
-              Stop Recording
-            </Button>
-          ) : null}
-        </Box>
+        <VideoReview
+          open={showPreview}
+          onClose={handlePreviewClose}
+          videoBlob={currentVideoBlob}
+          allowReRecord={isPracticeQuestion}
+        />
       </Paper>
-
-      <VideoReview  // Change this component name
-        open={showPreview}
-        onClose={handlePreviewClose}
-        videoBlob={currentVideoBlob}
-        allowReRecord={isPracticeQuestion}
-      />
     </Container>
   );
 }
