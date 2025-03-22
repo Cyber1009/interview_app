@@ -1,38 +1,51 @@
+/* Common styles */
 .App {
   text-align: center;
+  padding: 20px;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.interview-container {
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.video-container {
+  margin: 20px 0;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 8px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.video-preview {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 8px;
+  transform: translateZ(0); /* Force hardware acceleration */
+  backface-visibility: hidden; /* Prevent flickering */
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
 }
 
-.App-link {
-  color: #61dafb;
+.video-container video {
+  transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.video-container.video {
+  transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
 }
+
+/* Remove unused classes */
