@@ -9,7 +9,7 @@
 
 // Admin components
 export { default as AdminPanel } from './admin/AdminPanel';
-export { default as ThemeSwitcher } from './admin/ThemeSwitcher';
+export { default as ThemeSwitcher } from './admin/SetTheme';
 
 // Interview components
 export { default as Interview } from './interview/Interview';
