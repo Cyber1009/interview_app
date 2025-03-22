@@ -31,7 +31,7 @@ import {
   useTheme,
   alpha,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, KeyboardArrowUp as UpIcon, KeyboardArrowDown as DownIcon, QuestionMark as QuestionIcon, Palette as PaletteIcon, Key as KeyIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, KeyboardArrowUp as UpIcon, KeyboardArrowDown as DownIcon, QuestionMark as QuestionIcon, Palette as PaletteIcon, Key as KeyIcon, AccessTime, Videocam } from '@mui/icons-material';
 import { createTheme } from '@mui/material/styles';
 import { generateToken, cleanExpiredTokens } from '../../utils/tokenGenerator';
 
@@ -341,116 +341,243 @@ function AdminPanel({ onThemeChange }) {
               Interview Questions
             </Typography>
             <Paper elevation={0} sx={{ p: 3, borderRadius: 2, bgcolor: 'background.paper' }}>
-              <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-                <TextField
-                  fullWidth
-                  value={newQuestion}
-                  onChange={(e) => setNewQuestion(e.target.value)}
-                  label="New Question"
-                  variant="outlined"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                    },
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleAddQuestion}
-                  startIcon={<AddIcon />}
-                  sx={{ 
-                    px: 4,
-                    borderRadius: 2,
-                    boxShadow: 2,
-                  }}
-                >
-                  Add Question
-                </Button>
+              {/* New Question Form */}
+              <Box 
+                component="form" 
+                sx={{ 
+                  mb: 4,
+                  p: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03)
+                }}
+              >
+                <Typography variant="h6" gutterBottom>Add New Question</Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      value={newQuestion}
+                      onChange={(e) => setNewQuestion(e.target.value)}
+                      label="Question Text"
+                      variant="outlined"
+                      multiline
+                      rows={2}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Preparation Time (seconds)"
+                      defaultValue={60}
+                      InputProps={{
+                        endAdornment: <Typography variant="body2" sx={{ ml: 1 }}>sec</Typography>,
+                        inputProps: { min: 1, max: 300 }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Recording Time (seconds)"
+                      defaultValue={180}
+                      InputProps={{
+                        endAdornment: <Typography variant="body2" sx={{ ml: 1 }}>sec</Typography>,
+                        inputProps: { min: 1, max: 600 }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sx={{ textAlign: 'right' }}>
+                    <Button
+                      variant="contained"
+                      onClick={handleAddQuestion}
+                      startIcon={<AddIcon />}
+                      size="large"
+                      sx={{ 
+                        px: 4,
+                        py: 1.5,
+                        borderRadius: 2,
+                      }}
+                    >
+                      Add Question
+                    </Button>
+                  </Grid>
+                </Grid>
               </Box>
 
-              <List sx={{ 
-                width: '100%',
-                '& > *': {
-                  transition: 'transform 0.2s ease-in-out',
-                  '&:hover': {
-                    transform: 'translateX(8px)',
+              {/* Questions List */}
+              <Box>
+                <Typography variant="h6" sx={{ mb: 2 }}>Question List</Typography>
+                
+                <List sx={{ 
+                  width: '100%',
+                  '& > *': {
+                    transition: 'all 0.2s ease-in-out',
                   },
-                },
-              }}>
-                {questions.map((question, index) => (
-                  <ListItem
-                    key={question.id}
-                    sx={{
-                      bgcolor: 'background.paper',
-                      mb: 1,
-                      borderRadius: 1,
-                      '&:hover': { bgcolor: 'action.hover' },
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => moveQuestion(index, 'up')}
-                        disabled={index === 0}
+                }}>
+                  {questions.map((question, index) => (
+                    <Paper
+                      key={question.id}
+                      elevation={0}
+                      sx={{
+                        mb: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        overflow: 'hidden',
+                        '&:hover': { 
+                          borderColor: 'primary.main',
+                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
+                          transform: 'translateX(8px)',
+                        },
+                      }}
+                    >
+                      <ListItem
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 2,
+                          p: 0,
+                        }}
                       >
-                        <UpIcon />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => moveQuestion(index, 'down')}
-                        disabled={index === questions.length - 1}
-                      >
-                        <DownIcon />
-                      </IconButton>
-                    </Box>
-                    <Typography sx={{ flex: 1 }}>{question.text}</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="textSecondary">
-                          Prep time:
-                        </Typography>
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={question.preparationTime}
-                          onChange={(e) => handleTimeChange(question.id, 'preparationTime', e.target.value)}
-                          InputProps={{
-                            endAdornment: <Typography variant="body2">sec</Typography>,
-                            inputProps: { min: 1, max: 300 }
-                          }}
-                          sx={{ width: 90 }}
-                        />
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" color="textSecondary">
-                          Record time:
-                        </Typography>
-                        <TextField
-                          type="number"
-                          size="small"
-                          value={question.recordingTime}
-                          onChange={(e) => handleTimeChange(question.id, 'recordingTime', e.target.value)}
-                          InputProps={{
-                            endAdornment: <Typography variant="body2">sec</Typography>,
-                            inputProps: { min: 1, max: 600 }
-                          }}
-                          sx={{ width: 90 }}
-                        />
-                      </Box>
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleDeleteQuestion(question.id)}
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </ListItem>
-                ))}
-              </List>
+                        {/* Question Order Controls */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          p: 1,
+                          bgcolor: 'background.default'
+                        }}>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => moveQuestion(index, 'up')}
+                            disabled={index === 0}
+                          >
+                            <UpIcon />
+                          </IconButton>
+                          <Typography 
+                            align="center" 
+                            sx={{ 
+                              py: 0.5,
+                              color: 'text.secondary',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            {index + 1}
+                          </Typography>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => moveQuestion(index, 'down')}
+                            disabled={index === questions.length - 1}
+                          >
+                            <DownIcon />
+                          </IconButton>
+                        </Box>
+
+                        {/* Question Content */}
+                        <Box sx={{ 
+                          flex: 1, 
+                          p: 2,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 1
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {question.isPractice && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  px: 1,
+                                  py: 0.5,
+                                  bgcolor: 'info.main',
+                                  color: 'white',
+                                  borderRadius: 1,
+                                  fontSize: '0.75rem'
+                                }}
+                              >
+                                Practice
+                              </Typography>
+                            )}
+                            <TextField
+                              fullWidth
+                              value={question.text}
+                              onChange={(e) => {
+                                const updatedQuestions = questions.map(q =>
+                                  q.id === question.id ? { ...q, text: e.target.value } : q
+                                );
+                                setQuestions(updatedQuestions);
+                                localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
+                              }}
+                              variant="standard"
+                              sx={{
+                                '& .MuiInput-root': {
+                                  fontSize: '1rem',
+                                  fontWeight: 400,
+                                }
+                              }}
+                            />
+                          </Box>
+
+                          <Box sx={{ 
+                            display: 'flex', 
+                            gap: 3,
+                            alignItems: 'center'
+                          }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <AccessTime sx={{ fontSize: 20, color: 'action.active' }} />
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={question.preparationTime}
+                                onChange={(e) => handleTimeChange(question.id, 'preparationTime', e.target.value)}
+                                InputProps={{
+                                  endAdornment: <Typography variant="body2">sec</Typography>,
+                                  inputProps: { min: 1, max: 300 }
+                                }}
+                                sx={{ width: 90 }}
+                              />
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Videocam sx={{ fontSize: 20, color: 'action.active' }} />
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={question.recordingTime}
+                                onChange={(e) => handleTimeChange(question.id, 'recordingTime', e.target.value)}
+                                InputProps={{
+                                  endAdornment: <Typography variant="body2">sec</Typography>,
+                                  inputProps: { min: 1, max: 600 }
+                                }}
+                                sx={{ width: 90 }}
+                              />
+                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteQuestion(question.id)}
+                              sx={{ 
+                                ml: 'auto',
+                                color: 'error.main',
+                                '&:hover': {
+                                  bgcolor: (theme) => alpha(theme.palette.error.main, 0.1)
+                                }
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                      </ListItem>
+                    </Paper>
+                  ))}
+                </List>
+              </Box>
             </Paper>
           </Box>
         )}
