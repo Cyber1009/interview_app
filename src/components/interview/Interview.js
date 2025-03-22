@@ -149,6 +149,18 @@ function Interview() {
     setIsPracticeQuestion(questions[currentQuestionIndex]?.isPractice ?? false);
   }, [currentQuestionIndex, questions]);
 
+  // Add new useEffect to handle question changes
+  useEffect(() => {
+    if (currentQuestionIndex >= 0 && questions[currentQuestionIndex]) {
+      // Reset states for new question
+      setPreparationTime(questions[currentQuestionIndex].preparationTime);
+      setCountdown(questions[currentQuestionIndex].recordingTime);
+      setIsPreparing(true);
+      setHasAnswered(false);
+      startPreparationTimer();
+    }
+  }, [currentQuestionIndex]); // Only depend on question index changes
+
   const formatTime = (seconds) => {
     const mins = Math.floor(Math.max(0, seconds) / 60);
     const secs = Math.max(0, seconds) % 60;
@@ -304,16 +316,30 @@ function Interview() {
       startPreparationTimer();
     } else if (action === 'continue') {
       if (currentQuestionIndex < questions.length - 1) {
-        // Move to next question
-        stream.getTracks().forEach(track => track.enabled = true);
-        setCurrentQuestionIndex(prev => prev + 1);
-        setCountdown(questions[currentQuestionIndex + 1].recordingTime);
-        setHasAnswered(false);  // Reset hasAnswered
-        startPreparationTimer();
+          const nextIndex = currentQuestionIndex + 1;
+          
+          // First, update the current question index
+          setCurrentQuestionIndex(nextIndex);
+          
+          // Enable camera tracks
+          stream.getTracks().forEach(track => track.enabled = true);
+          
+          // Clear any existing timers
+          if (preparationTimerRef.current) {
+              clearInterval(preparationTimerRef.current);
+          }
+          
+          // Set initial states for next question
+          setPreparationTime(questions[nextIndex].preparationTime);
+          setCountdown(questions[nextIndex].recordingTime);
+          setHasAnswered(false);
+          setIsPreparing(true);
+          setShowWarning(false);
+          
+          // Remove the setTimeout and let the useEffect handle timer start
       } else {
-        // End interview
-        stopCamera();
-        navigate('/thank-you');
+          stopCamera();
+          navigate('/thank-you');
       }
     }
 
