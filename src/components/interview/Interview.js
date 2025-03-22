@@ -137,11 +137,21 @@ function Interview() {
     }
   }, [preparationTime]);
 
-  // Add new useEffect for auto-stopping
   useEffect(() => {
-    if (isRecording && countdown <= 0) {
-      stopRecording();
-    }
+    const handleAutoStop = async () => {
+      if (isRecording && countdown <= 0) {
+        // Ensure we have all chunks before stopping
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          // Request the final chunk
+          mediaRecorderRef.current.requestData();
+          // Small delay to ensure the last chunk is captured
+          await new Promise(resolve => setTimeout(resolve, 100));
+          stopRecording();
+        }
+      }
+    };
+  
+    handleAutoStop();
   }, [countdown, isRecording]);
 
   useEffect(() => {
