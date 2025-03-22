@@ -84,6 +84,7 @@ function Interview() {
   const [startTime, setStartTime] = useState(null);
   const [hasAnswered, setHasAnswered] = useState(false);  // Add this state
   const [isPracticeQuestion, setIsPracticeQuestion] = useState(true);
+  const [isStartingRecording, setIsStartingRecording] = useState(false);  // Add this state
 
   const mediaRecorderRef = useRef(null);
   const videoRef = useRef(null);
@@ -241,13 +242,24 @@ function Interview() {
   };
 
   const startRecording = async () => {
-    if (isPreparing) {
-      clearInterval(preparationTimerRef.current);
-      setIsPreparing(false);
-      setShowWarning(false);
-    }
-
+    // Prevent multiple clicks while starting recording
+    if (isStartingRecording || isRecording) return;
+    
+    setIsStartingRecording(true);
+    
     try {
+      // Stop any existing recording first
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to ensure cleanup
+      }
+
+      if (isPreparing) {
+        clearInterval(preparationTimerRef.current);
+        setIsPreparing(false);
+        setShowWarning(false);
+      }
+
       chunksRef.current = [];
       setRecordedChunks([]);
       const currentQuestionTime = questions[currentQuestionIndex].recordingTime;
@@ -256,6 +268,9 @@ function Interview() {
       if (!stream) {
         throw new Error("No media stream available");
       }
+
+      // Re-enable tracks if they were disabled
+      stream.getTracks().forEach(track => track.enabled = true);
 
       mediaRecorderRef.current = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8,opus',
@@ -274,15 +289,15 @@ function Interview() {
         setShowPreview(true);
       };
 
-      mediaRecorderRef.current.start(1000);
-      setIsRecording(true);
-
-      const startTimeStamp = Date.now();
-      
+      // Clear any existing timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
 
+      mediaRecorderRef.current.start(1000);
+      setIsRecording(true);
+
+      const startTimeStamp = Date.now();
       timerRef.current = setInterval(() => {
         const remaining = currentQuestionTime - Math.floor((Date.now() - startTimeStamp) / 1000);
         if (remaining <= 0) {
@@ -297,6 +312,8 @@ function Interview() {
     } catch (err) {
       console.error("Error starting recording:", err);
       alert("Error starting recording. Please refresh and try again.");
+    } finally {
+      setIsStartingRecording(false);
     }
   };
 
@@ -309,12 +326,10 @@ function Interview() {
       try {
         if (mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
-          // Create blob right away to ensure data is available
           const blob = new Blob(chunksRef.current, { type: 'video/webm' });
           setCurrentVideoBlob(blob);
-          setHasAnswered(true);  // Add this line before setShowPreview(true)
+          setHasAnswered(true);
           setShowPreview(true);
-          // Disable tracks after blob creation
           stream.getTracks().forEach(track => track.enabled = false);
         }
       } catch (err) {

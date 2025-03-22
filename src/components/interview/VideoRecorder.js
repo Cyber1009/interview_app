@@ -117,6 +117,7 @@ const VideoRecorder = ({
             color="primary"
             startIcon={<FiberManualRecord />}
             onClick={onStartRecording}
+            disabled={isRecording || hasAnswered}  // Add disabled state
             size="large"
             sx={{ 
               px: 4, 
