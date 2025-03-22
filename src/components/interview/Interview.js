@@ -35,9 +35,9 @@ function Interview() {
     // Instead of using imported practice question, create it inline
     const practiceQ = {
       id: 0,
-      text: "Practice: Describe your favorite hobby.",
-      preparationTime: 60,
-      recordingTime: 180,
+      text: "Introduce yourslef.",
+      preparationTime: 10,
+      recordingTime: 10,
       isPractice: true
     };
 
@@ -49,10 +49,10 @@ function Interview() {
     // Default questions if none stored
     return [
       practiceQ,
-      { id: 1, text: "Tell us about yourself and your background.", preparationTime: 60, recordingTime: 180 },
-      { id: 2, text: "What are your key strengths?", preparationTime: 60, recordingTime: 180 },
-      { id: 3, text: "Why are you interested in this position?", preparationTime: 60, recordingTime: 180 },
-      { id: 4, text: "Where do you see yourself in five years?", preparationTime: 60, recordingTime: 180 },
+      { id: 1, text: "Tell us about yourself and your background.", preparationTime: 60, recordingTime: 120 },
+      { id: 2, text: "What are your key strengths?", preparationTime: 60, recordingTime: 120 },
+      { id: 3, text: "Why are you interested in this position?", preparationTime: 60, recordingTime: 120 },
+      { id: 4, text: "Where do you see yourself in five years?", preparationTime: 60, recordingTime: 120 },
     ];
   });
   
