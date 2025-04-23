@@ -9,9 +9,8 @@
  * - Video upload handling
  */
 
-// src/components/Interview.js
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -37,7 +36,6 @@ import VideoRecorder from './VideoRecorder';
 import QuestionDisplay from './QuestionDisplay';
 import TimerComponent from './TimerComponent';
 import ProgressTracker from './ProgressTracker';
-import interviewService from '../../services/interviewService';
 
 const buttonSx = {
   px: 4,
@@ -46,10 +44,31 @@ const buttonSx = {
 };
 
 function Interview() {
-  const { interviewId } = useParams();
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [questions, setQuestions] = useState(() => {
+    const storedQuestions = JSON.parse(localStorage.getItem('interviewQuestions'));
+    // Instead of using imported practice question, create it inline
+    const practiceQ = {
+      id: 0,
+      text: "Introduce yourslef.",
+      preparationTime: 10,
+      recordingTime: 10,
+      isPractice: true
+    };
+
+    if (storedQuestions) {
+      // Ensure practice question is always first
+      return [practiceQ, ...storedQuestions.filter(q => !q.isPractice)];
+    }
+    
+    // Default questions if none stored
+    return [
+      practiceQ,
+      { id: 1, text: "Tell us about yourself and your background.", preparationTime: 60, recordingTime: 120 },
+      { id: 2, text: "What are your key strengths?", preparationTime: 60, recordingTime: 120 },
+      { id: 3, text: "Why are you interested in this position?", preparationTime: 60, recordingTime: 120 },
+      { id: 4, text: "Where do you see yourself in five years?", preparationTime: 60, recordingTime: 120 },
+    ];
+  });
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -75,33 +94,18 @@ function Interview() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchQuestions() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const data = await interviewService.getQuestions(interviewId);
-        
-        const practiceQ = {
-          id: 0,
-          text: "Introduce yourself.",
-          preparationTime: 10,
-          recordingTime: 10,
-          isPractice: true
-        };
-        
-        const allQuestions = [practiceQ, ...data];
-        setQuestions(allQuestions);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch questions:", err);
-        setError("Failed to load interview questions. Please try again.");
-        setLoading(false);
+    const handleStorageChange = (e) => {
+      if (e.key === 'interviewQuestions') {
+        const newQuestions = JSON.parse(e.newValue);
+        // Convert question objects to strings
+        const questionTexts = newQuestions.map(q => typeof q === 'object' ? q.text : q);
+        setQuestions(questionTexts);
       }
-    }
+    };
     
-    fetchQuestions();
-  }, [interviewId]);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     const checkAndInitializeCamera = async () => {
@@ -129,18 +133,16 @@ function Interview() {
       }
     };
 
-    if (!loading && questions.length > 0) {
-      checkAndInitializeCamera();
-    }
+    checkAndInitializeCamera();
 
     return () => stopCamera();
-  }, [navigate, loading, questions]);
+  }, [navigate]);
 
   useEffect(() => {
     if (preparationTime === 0) {
-      startRecording();
+      startRecording();  // Move startRecording() here to ensure it runs after state updates
     }
-  }, [preparationTime]);
+  }, [preparationTime]);  // Only depend on preparationTime
 
   useEffect(() => {
     if (preparationTime === 0 && isPreparing) {
@@ -153,8 +155,11 @@ function Interview() {
   useEffect(() => {
     const handleAutoStop = async () => {
       if (isRecording && countdown <= 0) {
+        // Ensure we have all chunks before stopping
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          // Request the final chunk
           mediaRecorderRef.current.requestData();
+          // Small delay to ensure the last chunk is captured
           await new Promise(resolve => setTimeout(resolve, 100));
           stopRecording();
         }
@@ -165,18 +170,21 @@ function Interview() {
   }, [countdown, isRecording]);
 
   useEffect(() => {
+    // Update when question changes
     setIsPracticeQuestion(questions[currentQuestionIndex]?.isPractice ?? false);
   }, [currentQuestionIndex, questions]);
 
+  // Add new useEffect to handle question changes
   useEffect(() => {
     if (currentQuestionIndex >= 0 && questions[currentQuestionIndex]) {
+      // Reset states for new question
       setPreparationTime(questions[currentQuestionIndex].preparationTime);
       setCountdown(questions[currentQuestionIndex].recordingTime);
       setIsPreparing(true);
       setHasAnswered(false);
       startPreparationTimer();
     }
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex]); // Only depend on question index changes
 
   const formatTime = (seconds) => {
     const mins = Math.floor(Math.max(0, seconds) / 60);
@@ -193,104 +201,141 @@ function Interview() {
   };
 
   const startPreparationTimer = () => {
-    if (questions.length === 0) return;
+    const currentPreparationTime = questions[currentQuestionIndex].preparationTime || 60;
+    setPreparationTime(currentPreparationTime);
+    setIsPreparing(true);
+    setShowWarning(false);
+    const startTimeStamp = Date.now();
     
-    const currentQuestion = questions[currentQuestionIndex];
-    const prepTime = currentQuestion.preparationTime || 60;
-    setPreparationTime(prepTime);
-    
+    if (preparationTimerRef.current) {
+      clearInterval(preparationTimerRef.current);
+    }
+
     preparationTimerRef.current = setInterval(() => {
-      setPreparationTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(preparationTimerRef.current);
-          setIsStartingRecording(true);
-          return 0;
+      const elapsed = Math.floor((Date.now() - startTimeStamp) / 1000);
+      const remaining = currentPreparationTime - elapsed;
+      
+      if (remaining <= 0) {
+        clearInterval(preparationTimerRef.current);
+        setPreparationTime(0);
+        setIsPreparing(false);
+        setShowWarning(false);
+      } else {
+        setPreparationTime(remaining);
+        if (remaining <= 10) {
+          setShowWarning(true);
         }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const startRecording = () => {
-    if (!stream) return;
-    
-    setIsPreparing(false);
-    setIsRecording(true);
-    setIsStartingRecording(false);
-    setStartTime(Date.now());
-
-    chunksRef.current = [];
-    
-    const mediaRecorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = mediaRecorder;
-    
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        chunksRef.current.push(e.data);
       }
-    };
-    
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, {
-        type: 'video/webm'
-      });
-      setCurrentVideoBlob(blob);
-      setShowPreview(true);
-      setHasAnswered(true);
-      
-      saveRecording(blob);
-    };
-    
-    mediaRecorder.start();
-    startAnswerTimer();
+    }, 100);
   };
 
-  const saveRecording = async (blob) => {
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    if (preparationTimerRef.current) {
+      clearInterval(preparationTimerRef.current);
+    }
+  };
+
+  const startRecording = async () => {
+    // Prevent multiple clicks while starting recording
+    if (isStartingRecording || isRecording) return;
+    
+    setIsStartingRecording(true);
+    
     try {
-      const currentQuestion = questions[currentQuestionIndex];
+      // Stop any existing recording first
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to ensure cleanup
+      }
+
+      if (isPreparing) {
+        clearInterval(preparationTimerRef.current);
+        setIsPreparing(false);
+        setShowWarning(false);
+      }
+
+      chunksRef.current = [];
+      setRecordedChunks([]);
+      const currentQuestionTime = questions[currentQuestionIndex].recordingTime;
+      setCountdown(currentQuestionTime);
       
-      await interviewService.saveRecording({
-        interviewId,
-        questionId: currentQuestion.id,
-        recordingBlob: blob,
-        duration: countdown - (countdown - Math.floor((Date.now() - startTime) / 1000))
+      if (!stream) {
+        throw new Error("No media stream available");
+      }
+
+      // Re-enable tracks if they were disabled
+      stream.getTracks().forEach(track => track.enabled = true);
+
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: 2500000
       });
-      
-      console.log("Recording saved successfully");
-    } catch (error) {
-      console.error("Failed to save recording:", error);
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        setCurrentVideoBlob(blob);
+        setShowPreview(true);
+      };
+
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+
+      mediaRecorderRef.current.start(1000);
+      setIsRecording(true);
+
+      const startTimeStamp = Date.now();
+      timerRef.current = setInterval(() => {
+        const remaining = currentQuestionTime - Math.floor((Date.now() - startTimeStamp) / 1000);
+        if (remaining <= 0) {
+          clearInterval(timerRef.current);
+          setCountdown(0);
+          stopRecording();
+        } else {
+          setCountdown(remaining);
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error("Error starting recording:", err);
+      alert("Error starting recording. Please refresh and try again.");
+    } finally {
+      setIsStartingRecording(false);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
       clearInterval(timerRef.current);
+      setIsRecording(false);
+      setCountdown(0);
+      
+      try {
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          setCurrentVideoBlob(blob);
+          setHasAnswered(true);
+          setShowPreview(true);
+          stream.getTracks().forEach(track => track.enabled = false);
+        }
+      } catch (err) {
+        console.error("Error stopping recording:", err);
+      }
     }
-  };
-
-  const startAnswerTimer = () => {
-    if (questions.length === 0) return;
-    
-    const currentQuestion = questions[currentQuestionIndex];
-    const recTime = currentQuestion.recordingTime || 180;
-    setCountdown(recTime);
-    
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 31 && !showWarning) {
-          setShowWarning(true);
-        }
-        
-        if (prev <= 1) {
-          stopRecording();
-          clearInterval(timerRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
 
   const handlePreviewClose = async (action) => {
@@ -301,11 +346,13 @@ function Interview() {
     setShowPreview(false);
 
     if (action === 're-record') {
+      // Re-enable tracks for re-recording
       stream.getTracks().forEach(track => track.enabled = true);
       setCountdown(questions[currentQuestionIndex].recordingTime);
       setHasAnswered(false);
       startPreparationTimer();
     } else if (action === 'continue') {
+      // Upload video if it's not a practice question
       if (!questions[currentQuestionIndex].isPractice && currentVideoBlob) {
         try {
           const formData = new FormData();
@@ -322,6 +369,8 @@ function Interview() {
           }
         } catch (error) {
           console.error('Error uploading video:', error);
+          // Optionally show an error message to the user
+          // but continue with the interview process
         }
       }
 
@@ -338,7 +387,8 @@ function Interview() {
         setIsPreparing(true);
         setShowWarning(false);
       } else {
-        completeInterview();
+        stopCamera();
+        navigate('/thank-you');
       }
     }
 
@@ -347,50 +397,10 @@ function Interview() {
     setRecordedChunks([]);
   };
 
-  const handleContinue = () => {
-    setShowPreview(false);
-    setShowWarning(false);
-    
-    if (isPracticeQuestion || currentQuestionIndex < questions.length - 1) {
-      if (isPracticeQuestion) {
-        setIsPracticeQuestion(false);
-      } else {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-      }
-      
-      setHasAnswered(false);
-      setIsPreparing(true);
-      startPreparationTimer();
-    } else {
-      completeInterview();
-    }
-  };
-
-  const completeInterview = async () => {
-    try {
-      await interviewService.completeInterview(interviewId);
-      navigate('/thank-you');
-    } catch (error) {
-      console.error("Failed to complete interview:", error);
-      navigate('/thank-you');
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    
-    if (preparationTimerRef.current) {
-      clearInterval(preparationTimerRef.current);
-    }
-  };
-
+  // Add a function to calculate progress
   const calculateProgress = () => {
+    // Calculate progress based on current question (currentQuestionIndex + 1)
+    // Each question represents an equal portion of the total progress
     return ((currentQuestionIndex + 1) / questions.length) * 100;
   };
 
@@ -398,42 +408,9 @@ function Interview() {
     if (isPracticeQuestion) {
       return `Practice Question: ${questions[currentQuestionIndex].text}`;
     }
+    // Add 1 to currentQuestionIndex to start regular questions at 1
     return `Q${currentQuestionIndex}. ${questions[currentQuestionIndex].text}`;
   };
-
-  if (loading) {
-    return (
-      <Container maxWidth="md" sx={{ mt: 5, textAlign: 'center' }}>
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading interview questions...
-        </Typography>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="md" sx={{ mt: 5 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-        <Button 
-          variant="contained" 
-          onClick={() => window.location.reload()}
-          sx={buttonSx}
-        >
-          Retry
-        </Button>
-      </Container>
-    );
-  }
-
-  const currentQuestion = questions.length > 0 ? 
-    questions[currentQuestionIndex] : 
-    { text: "Loading question..." };
-
-  const isLastQuestion = currentQuestionIndex === questions.length - 1 && !isPracticeQuestion;
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>

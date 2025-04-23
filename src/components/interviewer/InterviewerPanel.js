@@ -6,20 +6,19 @@ import {
 import { Logout as LogoutIcon, Menu as MenuIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import AccessToken from './AccessToken';
-import QuestionManager from './QuestionManager';
-import ConfigManager from './ConfigManager';
-import InterviewResults from './InterviewResults';
+import SetQuestion from './SetQuestion';
 import SetTheme from './SetTheme';
+import InterviewResults from './InterviewResults';
 import { AuthService } from '../../services';
 
-const AdminPanel = ({ onThemeChange, onLogoChange, logo }) => {
+const InterviewerPanel = ({ onThemeChange, onLogoChange, logo }) => {
   const [currentTab, setCurrentTab] = useState(0);
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     AuthService.logout();
-    navigate('/admin/login');
+    navigate('/interviewer/login');
   };
 
   const handleTabChange = (event, newValue) => {
@@ -39,7 +38,7 @@ const AdminPanel = ({ onThemeChange, onLogoChange, logo }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Admin Panel
+            Interviewer Dashboard
           </Typography>
           <Button 
             color="inherit" 
@@ -59,20 +58,18 @@ const AdminPanel = ({ onThemeChange, onLogoChange, logo }) => {
           <Tab label="Access Tokens" />
           <Tab label="Questions" />
           <Tab label="Theme" />
-          <Tab label="Configuration" />
           <Tab label="Results" />
         </Tabs>
       </AppBar>
 
       <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
         {currentTab === 0 && <AccessToken />}
-        {currentTab === 1 && <QuestionManager />}
+        {currentTab === 1 && <SetQuestion />}
         {currentTab === 2 && <SetTheme onThemeChange={onThemeChange} onLogoChange={onLogoChange} logo={logo} />}
-        {currentTab === 3 && <ConfigManager />}
-        {currentTab === 4 && <InterviewResults />}
+        {currentTab === 3 && <InterviewResults />}
       </Container>
     </Box>
   );
 };
 
-export default AdminPanel;
+export default InterviewerPanel;

@@ -1,3 +1,4 @@
+// filepath: c:\Users\yuanz\vsproject\interview_app\src\components\interviewer\AccessToken.js
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Button, Grid, Paper, IconButton, Card, CardContent, CardHeader
@@ -83,7 +84,7 @@ const AccessToken = () => {
       <Typography variant="h5" sx={{ 
         mb: 4, 
         fontWeight: 700,
-        fontSize: '1.25rem',  // Update page title font size
+        fontSize: '1.25rem',
         letterSpacing: '0.01em',
         color: 'text.primary'
       }}>
