@@ -1,137 +1,134 @@
-/**
- * Interview Service
- * Handles:
- * - Interview session management
- * - Questions handling
- * - Interview tokens
- * - Results and analysis
- */
+// src/services/interviewService.js
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
-import api from './api';
-import { ErrorService } from './index';
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: API_BASE_URL || 'http://localhost:8000/api'
+});
 
-class InterviewService {
-  /**
-   * Verify an interview token
-   * @param {string} token - The token to verify
-   * @returns {Promise} - Promise with token verification result
-   */
-  async verifyToken(token) {
-    try {
-      const response = await api.post('/interviews/verify-token', { token });
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to verify token', error);
-      throw error;
-    }
+// Add auth token to all requests
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  /**
-   * Start an interview session
-   * @param {string} token - The valid interview token
-   * @returns {Promise} - Promise with session data
-   */
-  async startSession(token) {
-    try {
-      const response = await api.post('/interviews/sessions/start', { token });
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to start session', error);
-      throw error;
-    }
-  }
+const interviewAPI = {
+  // Interview management
+  getAllInterviews: () => {
+    return api.get('/interviews');
+  },
 
-  /**
-   * End an interview session
-   * @param {number} sessionId - The session ID to end
-   * @returns {Promise} - Promise with session end result
-   */
-  async endSession(sessionId) {
-    try {
-      const response = await api.post(`/interviews/sessions/${sessionId}/end`);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to end session', error);
-      throw error;
-    }
-  }
+  getInterview: (id) => {
+    return api.get(`/interviews/${id}`);
+  },
 
-  /**
-   * Get interview questions
-   * @param {number} interviewId - The interview ID
-   * @returns {Promise} - Promise with interview questions
-   */
-  async getQuestions(interviewId) {
-    try {
-      const response = await api.get(`/interviews/${interviewId}/questions`);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch questions', error);
-      throw error;
-    }
-  }
+  createInterview: (interviewData) => {
+    return api.post('/interviews', interviewData);
+  },
 
-  /**
-   * Get interview by ID
-   * @param {number} interviewId - The interview ID
-   * @returns {Promise} - Promise with interview data
-   */
-  async getInterview(interviewId) {
-    try {
-      const response = await api.get(`/interviews/${interviewId}`);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch interview', error);
-      throw error;
-    }
-  }
+  updateInterview: (id, interviewData) => {
+    return api.put(`/interviews/${id}`, interviewData);
+  },
+
+  deleteInterview: (id) => {
+    return api.delete(`/interviews/${id}`);
+  },
+
+  // Question management
+  getQuestions: (interviewId) => {
+    return api.get(`/interviews/${interviewId}/questions`);
+  },
+
+  getQuestionsByInterview: (interviewId) => {
+    return api.get(`/interviews/${interviewId}/questions`);
+  },
+
+  addQuestion: (questionData) => {
+    const { interviewId, ...data } = questionData;
+    return api.post(`/interviews/${interviewId}/questions`, data);
+  },
+
+  updateQuestion: (id, questionData) => {
+    return api.put(`/questions/${id}`, questionData);
+  },
+
+  deleteQuestion: (id) => {
+    return api.delete(`/questions/${id}`);
+  },
+
+  reorderQuestions: (interviewId, questionIds) => {
+    return api.post(`/interviews/${interviewId}/questions/reorder`, { questionIds });
+  },
+
+  // Token management
+  getTokensByInterview: (interviewId) => {
+    return api.get(`/interviews/${interviewId}/tokens`);
+  },
+
+  generateToken: (interviewId) => {
+    return api.post(`/interviews/${interviewId}/tokens`);
+  },
+
+  generateBulkTokens: (interviewId, count) => {
+    return api.post(`/interviews/${interviewId}/tokens/bulk`, { count });
+  },
+
+  deleteToken: (id) => {
+    return api.delete(`/tokens/${id}`);
+  },
+
+  validateAccessToken: (token) => {
+    return api.post('/validate-token', { token });
+  },
   
-  /**
-   * Create a new question
-   * @param {number} interviewId - The interview ID
-   * @param {Object} questionData - Question data
-   * @returns {Promise} - Promise with question creation result
-   */
-  async createQuestion(interviewId, questionData) {
-    try {
-      const response = await api.post(`/interviews/${interviewId}/questions`, questionData);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to create question', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Update question order
-   * @param {number} interviewId - The interview ID
-   * @param {Array} orderUpdates - Array of order updates
-   * @returns {Promise} - Promise with order update result
-   */
-  async updateQuestionOrder(interviewId, orderUpdates) {
-    try {
-      const response = await api.put(`/interviews/${interviewId}/questions/order`, { updates: orderUpdates });
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to update question order', error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Get interview results
-   * @param {number} interviewId - The interview ID
-   * @returns {Promise} - Promise with interview results
-   */
-  async getInterviewResults(interviewId) {
-    try {
-      const response = await api.get(`/interviews/${interviewId}/results`);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch interview results', error);
-      throw error;
-    }
-  }
-}
+  // Result management
+  getInterviewResults: (interviewId) => {
+    return api.get(`/interviews/${interviewId}/results`);
+  },
 
-export default new InterviewService();
+  getResultDetail: (resultId) => {
+    return api.get(`/results/${resultId}`);
+  },
+
+  deleteResult: (resultId) => {
+    return api.delete(`/results/${resultId}`);
+  },
+
+  updateResultStatus: (resultId, statusData) => {
+    return api.patch(`/results/${resultId}/status`, statusData);
+  },
+
+  // Candidate interview session
+  startInterview: (token) => {
+    return api.post('/interview/start', { token });
+  },
+
+  submitAnswer: (interviewId, answerData) => {
+    return api.post(`/interview/${interviewId}/answer`, answerData);
+  },
+
+  completeInterview: (interviewId) => {
+    return api.post(`/interview/${interviewId}/complete`);
+  },
+
+  saveRecording: (recordingData) => {
+    const { interviewId, questionId, recordingBlob, duration } = recordingData;
+    
+    const formData = new FormData();
+    formData.append('video', recordingBlob, `question_${questionId}.webm`);
+    formData.append('questionId', questionId);
+    formData.append('duration', duration);
+    
+    return api.post(`/interview/${interviewId}/recording`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
+};
+
+export default interviewAPI;

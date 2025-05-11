@@ -1,304 +1,360 @@
 // filepath: c:\Users\yuanz\vsproject\interview_app\src\components\interviewer\SetQuestion.js
-import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
-  Box, Typography, TextField, Button, List,
-  IconButton, Paper, Grid, Card, CardHeader, CardContent
+  Container,
+  Typography,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  TextField,
+  IconButton,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Divider,
+  Alert,
+  Grid,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  DragIndicator as DragIcon,
+} from '@mui/icons-material';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
-// Add StrictModeDroppable component for React 18 compatibility
-const StrictModeDroppable = ({ children, ...props }) => {
-  const [enabled, setEnabled] = useState(false);
-  
-  React.useEffect(() => {
-    const animation = requestAnimationFrame(() => setEnabled(true));
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
-  }, []);
-
-  if (!enabled) {
-    return null;
-  }
-
-  return <Droppable {...props}>{children}</Droppable>;
-};
+// Import API services
+import { questionAPI, interviewAPI } from '../../services/api';
 
 const SetQuestion = () => {
-  const [questions, setQuestions] = useState(() => {
-    const saved = localStorage.getItem('interviewQuestions');
-    return saved ? JSON.parse(saved) : [];
+  const { interviewId } = useParams();
+  const [questions, setQuestions] = useState([]);
+  const [interview, setInterview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editQuestion, setEditQuestion] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState(null);
+  
+  const [formData, setFormData] = useState({
+    text: '',
+    preparationTime: 60,
+    recordingTime: 120,
+    interviewId: null
   });
-  const [newQuestion, setNewQuestion] = useState('');
 
-  const handleAddQuestion = () => {
-    if (newQuestion.trim()) {
-      const newId = Math.max(...questions.map(q => q.id), 0) + 1;
-      const updatedQuestions = [...questions, { 
-        id: newId, 
-        text: newQuestion.trim(), 
-        preparationTime: 60,
-        recordingTime: 180 
-      }];
-      setQuestions(updatedQuestions);
-      localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
-      setNewQuestion('');
+  useEffect(() => {
+    fetchData();
+  }, [interviewId]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get interview details
+      const interviewResponse = await interviewAPI.getInterview(interviewId);
+      setInterview(interviewResponse.data);
+      
+      // Get questions for this interview
+      const questionsResponse = await questionAPI.getQuestionsByInterview(interviewId);
+      const sortedQuestions = [...questionsResponse.data].sort((a, b) => a.order - b.order);
+      setQuestions(sortedQuestions);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Failed to load questions. Please try again.');
+      setLoading(false);
     }
   };
 
-  const handleDeleteQuestion = (id) => {
-    const updatedQuestions = questions.filter(q => q.id !== id);
-    setQuestions(updatedQuestions);
-    localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
+  const handleOpenDialog = () => {
+    setFormData({
+      text: '',
+      preparationTime: 60,
+      recordingTime: 120,
+      interviewId: interviewId
+    });
+    setEditQuestion(null);
+    setOpenDialog(true);
   };
 
-  const handleUpdateTiming = (id, field, value) => {
-    const updatedQuestions = questions.map(q => 
-      q.id === id ? { ...q, [field]: parseInt(value) || 0 } : q
-    );
-    setQuestions(updatedQuestions);
-    localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
   };
 
-  const handleDragEnd = (result) => {
+  const handleEditQuestion = (question) => {
+    setFormData({
+      text: question.text,
+      preparationTime: question.preparationTime,
+      recordingTime: question.recordingTime,
+      interviewId: interviewId
+    });
+    setEditQuestion(question);
+    setOpenDialog(true);
+  };
+
+  const handleDeleteClick = (question) => {
+    setQuestionToDelete(question);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setQuestionToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!questionToDelete) return;
+    
+    try {
+      await questionAPI.deleteQuestion(questionToDelete.id);
+      setDeleteConfirmOpen(false);
+      setQuestionToDelete(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting question:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: name === 'text' ? value : parseInt(value, 10)
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      if (editQuestion) {
+        await questionAPI.updateQuestion(editQuestion.id, formData);
+      } else {
+        await questionAPI.addQuestion({
+          ...formData,
+          interviewId: interviewId
+        });
+      }
+      
+      setOpenDialog(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving question:', error);
+    }
+  };
+
+  const handleDragEnd = async (result) => {
     if (!result.destination) return;
-
-    const items = Array.from(questions);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setQuestions(items);
-    localStorage.setItem('interviewQuestions', JSON.stringify(items));
+    
+    const reorderedItems = Array.from(questions);
+    const [removed] = reorderedItems.splice(result.source.index, 1);
+    reorderedItems.splice(result.destination.index, 0, removed);
+    
+    // Update the local state first for immediate feedback
+    setQuestions(reorderedItems);
+    
+    try {
+      // Send the updated order to the backend
+      await questionAPI.reorderQuestions(
+        interviewId, 
+        reorderedItems.map(q => q.id)
+      );
+    } catch (error) {
+      console.error('Error updating question order:', error);
+      // If there was an error, fetch the data again to reset
+      fetchData();
+    }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Box>
-      <Typography variant="h5" sx={{ 
-        mb: 4, 
-        fontWeight: 700,
-        fontSize: '1.25rem',  // Update page title font size
-        letterSpacing: '0.01em',
-        color: 'text.primary'
-      }}>
-        Interview Questions
-      </Typography>
+    <Container>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+          Interview Questions
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {interview ? `Managing questions for "${interview.title}"` : 'Loading interview details...'}
+        </Typography>
+      </Box>
 
-      {/* Add Question Form */}
-      <Card elevation={0} sx={{ 
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        mb: 3 
-      }}>
-        <CardHeader 
-          title="Add New Question"
-          sx={{
-            p: 2.5,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            bgcolor: (theme) => alpha(theme.palette.background.default, 0.6),
-            '& .MuiCardHeader-title': {
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              letterSpacing: '0.02em'
-            }
-          }}
-        />
-        <CardContent sx={{ p: 2.5 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
-                label="Question Text"
-                multiline
-                rows={2}
-                sx={{ 
-                  bgcolor: 'background.default',
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.9375rem',
-                    letterSpacing: '0.01em'
-                  },
-                  '& .MuiInputLabel-root': {
-                    fontSize: '0.9375rem',
-                    letterSpacing: '0.01em'
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Preparation Time"
-                defaultValue={60}
-                InputProps={{
-                  endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
-                }}
-                sx={{ bgcolor: 'background.default' }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Recording Time"
-                defaultValue={180}
-                InputProps={{
-                  endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
-                }}
-                sx={{ bgcolor: 'background.default' }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Button
-                variant="contained"
-                onClick={handleAddQuestion}
-                startIcon={<AddIcon />}
-                sx={{ 
-                  height: 48, 
-                  px: 3,
-                  fontSize: '0.9375rem',
-                  letterSpacing: '0.01em',
-                  fontWeight: 500
-                }}
-              >
-                Add Question
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
-      {/* Question List */}
-      <Card elevation={0} sx={{ 
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2
-      }}>
-        <CardHeader 
-          title="Question List"
-          sx={{
-            p: 2.5,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            bgcolor: (theme) => alpha(theme.palette.background.default, 0.6),
-            '& .MuiCardHeader-title': {
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              letterSpacing: '0.02em'
-            }
-          }}
-        />
-        <CardContent sx={{ p: 2.5 }}>
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <StrictModeDroppable droppableId="questions">
-              {(provided) => (
-                <List 
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  sx={{ '& > :not(:last-child)': { mb: 2 } }}
-                >
-                  {questions.map((question, index) => (
-                    <Draggable 
-                      key={question.id.toString()} 
-                      draggableId={question.id.toString()} 
-                      index={index}
-                    >
-                      {(provided, snapshot) => (
-                        <Paper 
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          elevation={snapshot.isDragging ? 2 : 0}
-                          sx={{ 
-                            mb: 2, 
-                            p: 3, 
-                            border: '1px solid', 
-                            borderColor: 'divider',
-                            borderRadius: 2,
-                            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                            cursor: 'move',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: (theme) => `0 4px 8px ${alpha(theme.palette.common.black, 0.1)}`
-                            },
-                            ...(snapshot.isDragging && {
-                              background: (theme) => alpha(theme.palette.primary.main, 0.05)
-                            })
-                          }}
-                        >
-                          <Box {...provided.dragHandleProps} sx={{ width: '100%' }}>
-                            <Grid container spacing={3} alignItems="center">
-                              <Grid item xs={12} md={6}>
-                                <TextField 
-                                  fullWidth 
-                                  value={`Q${index + 1}. ${question.text}`}
-                                  onChange={(e) => {
-                                    const text = e.target.value.replace(/^Q\d+\.\s*/, '');
-                                    const updatedQuestions = questions.map(q =>
-                                      q.id === question.id ? { ...q, text: text } : q
-                                    );
-                                    setQuestions(updatedQuestions);
-                                    localStorage.setItem('interviewQuestions', JSON.stringify(updatedQuestions));
-                                  }}
-                                  multiline
-                                />
-                              </Grid>
-                              <Grid item xs={6} md={2}>
-                                <TextField
-                                  fullWidth
-                                  type="number"
-                                  label="Prep Time"
-                                  value={question.preparationTime}
-                                  onChange={(e) => handleUpdateTiming(question.id, 'preparationTime', e.target.value)}
-                                  InputProps={{
-                                    endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
-                                  }}
-                                />
-                              </Grid>
-                              <Grid item xs={6} md={2}>
-                                <TextField
-                                  fullWidth
-                                  type="number"
-                                  label="Record Time"
-                                  value={question.recordingTime}
-                                  onChange={(e) => handleUpdateTiming(question.id, 'recordingTime', e.target.value)}
-                                  InputProps={{
-                                    endAdornment: <Box sx={{ color: 'text.secondary', ml: 1 }}>sec</Box>
-                                  }}
-                                />
-                              </Grid>
-                              <Grid item xs={12} md={2} sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'flex-end',
-                                alignItems: 'center'
-                              }}>
-                                <IconButton 
-                                  onClick={() => handleDeleteQuestion(question.id)} 
-                                  color="error"
-                                  size="small"
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleOpenDialog}
+        >
+          Add Question
+        </Button>
+      </Box>
+
+      <Card>
+        <CardContent>
+          {questions.length > 0 ? (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="questions">
+                {(provided) => (
+                  <List {...provided.droppableProps} ref={provided.innerRef}>
+                    {questions.map((question, index) => (
+                      <Draggable key={question.id} draggableId={question.id.toString()} index={index}>
+                        {(provided) => (
+                          <React.Fragment>
+                            <ListItem
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              sx={{ 
+                                backgroundColor: 'background.paper',
+                                borderRadius: 1,
+                                mb: 1,
+                                boxShadow: 1
+                              }}
+                            >
+                              <Box {...provided.dragHandleProps} sx={{ mr: 2, cursor: 'grab' }}>
+                                <DragIcon color="action" />
+                              </Box>
+                              <ListItemText
+                                primary={
+                                  <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                                    {question.text}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Typography variant="body2" color="text.secondary">
+                                    Preparation: {question.preparationTime}s • Recording: {question.recordingTime}s
+                                  </Typography>
+                                }
+                              />
+                              <ListItemSecondaryAction>
+                                <IconButton
+                                  edge="end"
+                                  onClick={() => handleEditQuestion(question)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                                <IconButton
+                                  edge="end"
+                                  onClick={() => handleDeleteClick(question)}
                                 >
                                   <DeleteIcon />
                                 </IconButton>
-                              </Grid>
-                            </Grid>
-                          </Box>
-                        </Paper>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </List>
-              )}
-            </StrictModeDroppable>
-          </DragDropContext>
+                              </ListItemSecondaryAction>
+                            </ListItem>
+                            {index < questions.length - 1 && <Box sx={{ my: 1 }} />}
+                          </React.Fragment>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </List>
+                )}
+              </Droppable>
+            </DragDropContext>
+          ) : (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <Typography color="text.secondary">
+                No questions added yet. Click "Add Question" to create one.
+              </Typography>
+            </Box>
+          )}
         </CardContent>
       </Card>
-    </Box>
+
+      {/* Create/Edit Question Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>{editQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+        <DialogContent>
+          <Box component="form" sx={{ mt: 1 }}>
+            <TextField
+              label="Question Text"
+              name="text"
+              value={formData.text}
+              onChange={handleInputChange}
+              fullWidth
+              multiline
+              rows={3}
+              margin="normal"
+              required
+            />
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Preparation Time (seconds)"
+                  name="preparationTime"
+                  type="number"
+                  value={formData.preparationTime}
+                  onChange={handleInputChange}
+                  fullWidth
+                  InputProps={{ inputProps: { min: 0 } }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Recording Time (seconds)"
+                  name="recordingTime"
+                  type="number"
+                  value={formData.recordingTime}
+                  onChange={handleInputChange}
+                  fullWidth
+                  InputProps={{ inputProps: { min: 10 } }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseDialog} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} variant="contained">
+            {editQuestion ? 'Update' : 'Add'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this question? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 

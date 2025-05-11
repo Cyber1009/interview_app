@@ -1,147 +1,74 @@
-/**
- * Video Review Component
- * Handles:
- * - Recorded video playback
- * - Re-recording options for practice questions
- * - Video review confirmation
- * - Transition to next questions
- * - Upload progress indication
- */
-
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
+  DialogContent,
+  DialogTitle,
   Button,
   Box,
-  CircularProgress,
+  Typography
 } from '@mui/material';
-import ReplayIcon from '@mui/icons-material/Replay';
-import CheckIcon from '@mui/icons-material/Check';
 
-function VideoReview({ open, videoBlob, onClose, allowReRecord }) {
-  const videoRef = useRef(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [videoUrl, setVideoUrl] = useState(null);
+/**
+ * VideoReview component
+ * Displays recorded video for review before submission
+ */
+const VideoReview = ({ open, onClose, videoBlob, allowReRecord = true }) => {
+  if (!videoBlob) {
+    return null;
+  }
 
-  useEffect(() => {
-    if (!videoBlob) {
-      setIsLoaded(false);
-      return;
-    }
+  const videoUrl = URL.createObjectURL(videoBlob);
 
-    // Create new URL for the blob
-    const url = URL.createObjectURL(videoBlob);
-    setVideoUrl(url);
-
-    if (videoRef.current) {
-      const video = videoRef.current;
-      video.src = url;
-
-      const handleCanPlay = () => {
-        console.log('Video can play');
-        setIsLoaded(true);
-      };
-
-      const handleError = (e) => {
-        console.error('Video error:', e);
-        setIsLoaded(false);
-      };
-
-      video.addEventListener('canplay', handleCanPlay);
-      video.addEventListener('error', handleError);
-
-      // Return cleanup function
-      return () => {
-        video.removeEventListener('canplay', handleCanPlay);
-        video.removeEventListener('error', handleError);
-        URL.revokeObjectURL(url);
-        setVideoUrl(null);
-      };
-    }
-  }, [videoBlob]);
-
-  const handleClose = async (action) => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-    if (videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-      setVideoUrl(null);
-    }
-    setIsLoaded(false);
-
-    if (action === 'continue' && !allowReRecord) {
-      setIsUploading(true);
-    }
-
-    try {
-      await onClose(action);
-    } finally {
-      setIsUploading(false);
-    }
+  const handleAction = (action) => {
+    // Clean up the blob URL to prevent memory leaks
+    URL.revokeObjectURL(videoUrl);
+    onClose(action);
   };
 
   return (
     <Dialog
       open={open}
+      onClose={() => handleAction('cancel')}
       maxWidth="md"
       fullWidth
-      onClose={() => handleClose('cancel')}
     >
       <DialogTitle>
-        {isUploading ? 'Uploading Response...' : 'Review Your Response'}
+        Review Your Response
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ 
-          width: '100%', 
-          position: 'relative',
-          minHeight: '400px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'black',
-          borderRadius: 1,
-          overflow: 'hidden'
-        }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 2 }}>
           <video
-            ref={videoRef}
+            src={videoUrl}
             controls
-            playsInline
+            style={{ width: '100%', maxHeight: '60vh' }}
             autoPlay
-            style={{
-              width: '100%',
-              height: 'auto',
-              maxHeight: '70vh',
-            }}
           />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+            Review your video response. You can re-record if needed or continue to the next question.
+          </Typography>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 2, gap: 1 }}>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
         {allowReRecord && (
           <Button
             variant="outlined"
-            startIcon={<ReplayIcon />}
-            onClick={() => handleClose('re-record')}
-            disabled={isUploading}
+            onClick={() => handleAction('re-record')}
+            sx={{ mr: 1 }}
           >
             Record Again
           </Button>
         )}
         <Button
           variant="contained"
-          startIcon={isUploading ? <CircularProgress size={20} /> : <CheckIcon />}
-          onClick={() => handleClose('continue')}
-          disabled={!isLoaded || isUploading}
+          onClick={() => handleAction('continue')}
+          color="primary"
         >
-          {isUploading ? 'Uploading...' : 'Continue'}
+          {allowReRecord ? 'Continue' : 'Next Question'}
         </Button>
       </DialogActions>
     </Dialog>
   );
-}
+};
 
 export default VideoReview;

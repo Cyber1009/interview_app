@@ -63,8 +63,9 @@ const Layout = () => {
   };
 
   const handleLogout = () => {
-    AuthService.logout();
-    navigate('/admin/login');
+    // Use the updated logout method that accepts navigate function
+    AuthService.logout(navigate);
+    // No need to call navigate manually now
   };
 
   // Navigation items configuration

@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { Upload as UploadIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { alpha, createTheme } from '@mui/material/styles';
-import { themeConfigs } from '../../styles/theme';  // Updated import path
+import { themeConfigs } from '../../styles/theme';
 import { extractColors } from '../../utils/colorExtractor';
 
 const SetTheme = ({ onThemeChange, logo, onLogoChange }) => {

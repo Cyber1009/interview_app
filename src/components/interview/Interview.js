@@ -107,7 +107,8 @@ function Interview() {
     const checkAndInitializeCamera = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.error("Media devices not available");
-        navigate('/instructions');
+        setError("Your browser doesn't support camera access. Please use a modern browser with camera permissions enabled.");
+        setLoading(false);
         return;
       }
 
@@ -125,7 +126,8 @@ function Interview() {
         startPreparationTimer();
       } catch (err) {
         console.error("Camera access error:", err);
-        navigate('/instructions');
+        setError("Unable to access your camera or microphone. Please ensure you've granted permission and no other application is using them.");
+        setLoading(false);
       }
     };
 
@@ -462,22 +464,22 @@ function Interview() {
           isRecording={isRecording}
           hasAnswered={hasAnswered}
           isPreparing={isPreparing}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          countdown={countdown}
-          questionDuration={questions[currentQuestionIndex].recordingTime}
-          formatTime={formatTime}
-        />
-
-        <VideoReview
-          open={showPreview}
-          onClose={handlePreviewClose}
-          videoBlob={currentVideoBlob}
-          allowReRecord={isPracticeQuestion}
-        />
-      </Paper>
-    </Container>
-  );
-}
-
-export default Interview;
+                    "Take a breath between questions to maintain your composure."rding={startRecording}
+                  )}Recording={stopRecording}
+                </Typography>own={countdown}
+              </Box>Duration={questions[currentQuestionIndex].recordingTime}
+            </Box>    formatTime={formatTime}
+                 />
+            {/* Action buttons */}
+            <Box sx={{ mt: 'auto' }}>
+              {isPreparing && (en={showPreview}
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  fullWidth
+                  onClick={startRecording}
+                  startIcon={<Videocam />}
+                >
+                  I'm Ready - Start Recording
+                </Button>
+              )}terview;                            {isRecording && (                <Button                   variant="contained"                   color="error"                   fullWidth                  onClick={stopRecording}                  startIcon={<MicOff />}                >                  Stop Recording                </Button>              )}            </Box>          </Paper>        </Grid>      </Grid>            <Snackbar         open={notifications.open}         autoHideDuration={6000}         onClose={() => setNotifications(prev => ({ ...prev, open: false }))}      >        <Alert           severity={notifications.severity}           onClose={() => setNotifications(prev => ({ ...prev, open: false }))}          sx={{ width: '100%' }}        >          {notifications.message}        </Alert>      </Snackbar>    </Container>  );};export default Interview;

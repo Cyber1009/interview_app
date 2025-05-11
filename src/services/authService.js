@@ -80,6 +80,20 @@ class AuthService {
             message: 'Mock interviewer login successful' 
           };
         }
+        
+        // Mock pending account for demo purposes
+        if (credentials.email === 'pending@example.com' && credentials.password === 'pending123') {
+          console.log('Mock pending account login');
+          const pendingToken = 'mock-pending-token-' + Date.now();
+          localStorage.setItem('pendingToken', pendingToken);
+          localStorage.setItem('userRole', 'pending');
+          return {
+            pending_token: pendingToken,
+            status: 'pending',
+            message: 'Account requires payment to activate',
+            requiresPayment: true
+          };
+        }
       }
       
       // Try real API call if mock credentials failed or we're in production
@@ -107,7 +121,16 @@ class AuthService {
       
       console.log('API login response:', response);
       
-      if (response.data && response.data.access_token) {
+      if (response.data && response.data.status === 'pending') {
+        // Handle pending account that needs payment
+        console.log('Account requires payment to activate');
+        localStorage.setItem('pendingToken', response.data.pending_token);
+        localStorage.setItem('userRole', 'pending');
+        return {
+          ...response.data,
+          requiresPayment: true
+        };
+      } else if (response.data && response.data.access_token) {
         // Store token in localStorage for app-wide access
         localStorage.setItem('authToken', response.data.access_token);
         
@@ -144,6 +167,24 @@ class AuthService {
     } catch (error) {
       console.error("Login error details:", error);
       
+      // Check for specific error types
+      if (error.response && error.response.status === 402) {
+        // Payment required error
+        console.log('Account requires payment');
+        
+        if (error.response.data && error.response.data.pending_token) {
+          localStorage.setItem('pendingToken', error.response.data.pending_token);
+          localStorage.setItem('userRole', 'pending');
+          
+          return {
+            status: 'pending',
+            message: error.response.data.message || 'Account requires payment to activate',
+            requiresPayment: true,
+            pending_token: error.response.data.pending_token
+          };
+        }
+      }
+      
       // Try mock login as fallback in development if backend is unreachable
       if (process.env.NODE_ENV !== 'production' && (error.message.includes('Network Error') || error.code === 'ECONNREFUSED')) {
         console.log('Backend unreachable, trying fallback mock auth');
@@ -171,11 +212,31 @@ class AuthService {
   }
   
   /**
-   * Logout user
+   * Logout user and redirect to login page
+   * @param {function} navigate - React Router navigate function (optional)
    */
-  logout() {
+  logout(navigate = null) {
+    console.log('Logging out user...');
+    
+    // First, store a flag in sessionStorage to indicate we're in logout process
+    // This is more reliable than state params which can get lost in redirects
+    sessionStorage.setItem('explicit_logout', 'true');
+    
+    // Clear all auth-related data from storage
     localStorage.removeItem('authToken');
+    localStorage.removeItem('pendingToken');
     localStorage.removeItem('userRole');
+    
+    // If navigate function is provided, redirect to login with state
+    if (navigate) {
+      navigate('/interviewer/login', { 
+        replace: true, 
+        state: { 
+          loggedOut: true,
+          message: 'You have been logged out successfully.'
+        } 
+      });
+    }
   }
   
   /**
@@ -184,6 +245,14 @@ class AuthService {
    */
   isAuthenticated() {
     return !!localStorage.getItem('authToken');
+  }
+  
+  /**
+   * Check if user has a pending account requiring payment
+   * @returns {boolean} - True if pending payment required, false otherwise
+   */
+  hasPendingAccount() {
+    return !this.isAuthenticated() && !!localStorage.getItem('pendingToken');
   }
   
   /**
@@ -209,6 +278,14 @@ class AuthService {
    */
   getToken() {
     return localStorage.getItem('authToken');
+  }
+  
+  /**
+   * Get pending token
+   * @returns {string|null} - Pending token or null if not found
+   */
+  getPendingToken() {
+    return localStorage.getItem('pendingToken');
   }
   
   /**

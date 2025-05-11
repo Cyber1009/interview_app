@@ -77,7 +77,7 @@ const Welcome = () => {
               variant="contained"
               size="large"
               endIcon={<ArrowForward />}
-              onClick={() => navigate('/access')}
+              onClick={() => navigate('/interview-access')}
               sx={{
                 px: 6,
                 py: 2,

@@ -11,42 +11,41 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import './App.css';
+
+// Import all components
 import {
-  // Admin components
-  AdminPanel,
-  ConfigManager,
-  
-  // Interviewer components
-  InterviewerPanel,
-  InterviewerDashboard,
-  CreateInterview,
-  InterviewList,
+  CandidateLogin,
+  InterviewAccess,
+  InterviewerLogin,
+  ProtectedRoute,
+  AccessToken,
   SetQuestion,
-  InterviewAnalytics,
-  
-  // Candidate components
+  InterviewResults,
+  ConfigManager,
   Welcome,
   Instructions,
   Interview,
   ThankYou,
-  InterviewAccess,
-  
-  // Auth components
-  InterviewerLogin,
-  RequireAuth,
-  RequireToken,
-  
-  // Shared components
   ErrorBoundary,
   NotFound,
   Layout
 } from './components';
 
+// Import admin panel directly to avoid circular dependencies
+import AdminPanel from './components/admin/AdminPanel';
+
+// Import interviewer panel
+import InterviewerPanel from './components/interviewer/InterviewerPanel';
+
+// Import subscription component
+import Subscription from './components/payment/Subscription';
+
 // Import services
 import { AuthService, ThemeService } from './services';
 
 function App() {
-  const [theme, setTheme] = React.useState(() => {
+  const [theme, setTheme] = useState(() => {
     // Get theme from local storage or use default
     const savedTheme = ThemeService.getLocalTheme();
     return createTheme({
@@ -99,45 +98,57 @@ function App() {
       <ErrorBoundary>
         <Router>
           <Routes>
-            {/* Admin Routes */}
+            {/* Public routes - Changed to direct candidates to welcome page first */}
+            <Route path="/" element={<Navigate to="/welcome" replace />} />
+            <Route path="/welcome" element={<Welcome />} />
+            <Route path="/interview-access" element={<InterviewAccess />} />
+            <Route path="/interviewer/login" element={<InterviewerLogin />} />
             <Route path="/admin/login" element={<InterviewerLogin />} />
+            
+            {/* Payment/Subscription route - Allow pending account access */}
+            <Route path="/subscription" element={
+              AuthService.hasPendingAccount() || AuthService.isAuthenticated() ? 
+                <Subscription /> : 
+                <Navigate to="/interviewer/login" replace />
+            } />
+            
+            {/* Protected interviewer routes with new dashboard layout */}
             <Route 
-              path="/admin/*" 
+              path="/interviewer/*" 
               element={
-                <RequireAuth requiredRole="admin">
-                  <AdminPanel onThemeChange={handleThemeChange} onLogoChange={handleLogoChange} logo={logo} />
-                </RequireAuth>
+                <ProtectedRoute>
+                  <InterviewerPanel onThemeChange={handleThemeChange} onLogoChange={handleLogoChange} />
+                </ProtectedRoute>
               } 
             />
             
-            {/* Interviewer Routes */}
-            <Route path="/interviewer/login" element={<InterviewerLogin />} />
-            <Route
-              path="/interviewer"
+            {/* Admin routes with new dashboard layout */}
+            <Route 
+              path="/admin/*" 
               element={
-                <RequireAuth requiredRole="interviewer">
-                  <InterviewerPanel onThemeChange={handleThemeChange} onLogoChange={handleLogoChange} logo={logo} />
-                </RequireAuth>
-              }
+                <ProtectedRoute adminRequired>
+                  <AdminPanel onThemeChange={handleThemeChange} onLogoChange={handleLogoChange} />
+                </ProtectedRoute>
+              } 
             />
             
             {/* Candidate Routes */}
-            <Route path="/welcome" element={<Welcome />} />
-            <Route path="/access" element={<InterviewAccess />} />
             <Route path="/instructions" element={<Instructions />} />
             <Route 
               path="/interview/:interviewId" 
               element={
-                <RequireToken>
+                <ProtectedRoute>
                   <Interview />
-                </RequireToken>
+                </ProtectedRoute>
               } 
             />
             <Route path="/thank-you" element={<ThankYou />} />
             
-            {/* Fallback Routes */}
-            <Route path="/" element={<Navigate to="/welcome" replace />} />
-            <Route path="*" element={<NotFound />} />
+            {/* Legacy route - redirect to new interview access */}
+            <Route path="/interview/:token" element={<Navigate to="/interview-access" replace />} />
+            
+            {/* Redirect unknown paths to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </ErrorBoundary>
