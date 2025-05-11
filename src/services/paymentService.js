@@ -7,7 +7,7 @@
  * - Payment history
  */
 
-import api from './api';
+import { paymentsAPI } from '../api';
 
 class PaymentService {
   /**
@@ -26,19 +26,16 @@ class PaymentService {
       }
       
       // Call the backend API to create a checkout session
-      const response = await api.post(
-        `/v1/payments/checkout/registration/${paymentData.plan}?token=${token}`, 
-        {}  // We don't send card details directly anymore - Stripe handles this
-      );
+      const response = await paymentsAPI.createCheckoutSession(paymentData.plan, token);
       
-      console.log('Checkout session created:', response.data);
+      console.log('Checkout session created:', response);
       
       // Check if checkout URL is provided
-      if (response.data && response.data.checkout_url) {
+      if (response && response.checkout_url) {
         return {
           success: false,  // Not completed yet
-          checkoutUrl: response.data.checkout_url,
-          sessionId: response.data.session_id,
+          checkoutUrl: response.checkout_url,
+          sessionId: response.session_id,
           token: token,
           plan: paymentData.plan,
           amount: paymentData.amount
@@ -137,15 +134,10 @@ class PaymentService {
       
       // In a real integration, Stripe would call your backend webhook
       // Here we'll call the complete endpoint directly
-      const response = await api.post('/v1/payments/checkout/registration-complete', null, {
-        params: {
-          session_id: sessionId,
-          token: token
-        }
-      });
+      const response = await paymentsAPI.completeRegistration(sessionId, token);
       
-      console.log('Registration completed:', response.data);
-      return response.data;
+      console.log('Registration completed:', response);
+      return response;
     } catch (error) {
       console.error('Registration completion error:', error);
       
@@ -177,8 +169,7 @@ class PaymentService {
    */
   async verifyPaymentSession(sessionId) {
     try {
-      const response = await api.get(`/v1/payments/checkout/session/${sessionId}`);
-      return response.data;
+      return await paymentsAPI.verifyPaymentSession(sessionId);
     } catch (error) {
       console.error('Error verifying payment session:', error);
       throw error;
@@ -192,8 +183,8 @@ class PaymentService {
   async getSubscription() {
     try {
       // In a real app, this would get actual subscription details
-      const response = await api.get('/v1/users/me/subscription');
-      return response.data;
+      const response = await paymentsAPI.getUserSubscription();
+      return response;
     } catch (error) {
       console.error('Error fetching subscription:', error);
       
@@ -215,8 +206,8 @@ class PaymentService {
   async updateSubscription(newPlan) {
     try {
       // In a real app, this would update the subscription
-      const response = await api.put('/v1/users/subscription', { plan: newPlan });
-      return response.data;
+      const response = await paymentsAPI.updateSubscription(newPlan);
+      return response;
     } catch (error) {
       console.error('Error updating subscription:', error);
       
@@ -237,8 +228,8 @@ class PaymentService {
   async cancelSubscription() {
     try {
       // In a real app, this would cancel the subscription
-      const response = await api.delete('/v1/users/subscription');
-      return response.data;
+      const response = await paymentsAPI.cancelSubscription();
+      return response;
     } catch (error) {
       console.error('Error cancelling subscription:', error);
       
@@ -259,8 +250,8 @@ class PaymentService {
   async getPaymentHistory(options = { limit: 10, page: 1 }) {
     try {
       // In a real app, this would get actual payment history
-      const response = await api.get('/v1/users/payments', { params: options });
-      return response.data;
+      const response = await paymentsAPI.getPaymentHistory(options);
+      return response;
     } catch (error) {
       console.error('Error fetching payment history:', error);
       

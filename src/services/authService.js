@@ -8,8 +8,9 @@
  * - Password operations
  */
 
-import api from './api';
-import { ErrorService } from './index';
+// Import from consolidated API
+import { authAPI } from '../api';
+import ErrorService from './errorService';
 
 class AuthService {
   /**
@@ -19,25 +20,63 @@ class AuthService {
    */
   async register(registrationData) {
     try {
-      const response = await api.post('/auth/register', registrationData);
+      const response = await authAPI.register(registrationData);
+      // Store the verification token for subscription checkout
+      if (response.data && response.data.verification_token) {
+        localStorage.setItem('pendingToken', response.data.verification_token);
+      }
       return response.data;
     } catch (error) {
-      ErrorService.handleError('Registration failed', error);
+      console.error('Registration failed', error);
       throw error;
     }
   }
 
   /**
-   * Activate a user account with verification token and plan
-   * @param {Object} activationData - Activation data with verification_token and plan_id
-   * @returns {Promise} - Promise with activation response
+   * Create checkout session for a subscription plan
+   * @param {string} planId - ID of the plan to subscribe to
+   * @returns {Promise} - Promise with checkout URL and session ID
    */
-  async activateAccount(activationData) {
+  async createCheckoutSession(planId) {
     try {
-      const response = await api.post('/auth/activate', activationData);
+      const token = localStorage.getItem('pendingToken');
+      if (!token) {
+        throw new Error('No pending registration found');
+      }
+      
+      const response = await authAPI.createCheckoutSession(planId, token);
       return response.data;
     } catch (error) {
-      ErrorService.handleError('Account activation failed', error);
+      ErrorService.handleError('Failed to create checkout session', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Complete registration after successful payment
+   * @param {string} sessionId - Stripe checkout session ID
+   * @returns {Promise} - Promise with user account data
+   */
+  async completeRegistration(sessionId) {
+    try {
+      const token = localStorage.getItem('pendingToken');
+      const response = await authAPI.completeRegistration(sessionId, token);
+      
+      // Clear pending token and set auth token
+      if (response.data && response.data.id) {
+        localStorage.removeItem('pendingToken');
+        
+        // If there's an access_token in the response, set it
+        if (response.data.access_token) {
+          localStorage.setItem('authToken', response.data.access_token);
+          const userRole = this._parseUserRole(response.data.access_token);
+          localStorage.setItem('userRole', userRole || 'interviewer');
+        }
+      }
+      
+      return response.data;
+    } catch (error) {
+      ErrorService.handleError('Failed to complete registration', error);
       throw error;
     }
   }
@@ -49,119 +88,41 @@ class AuthService {
    */
   async login(credentials) {
     try {
-      // Always check for mock credentials first in development
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Using development mode auth checks');
-        
-        // Mock admin login
-        if (credentials.email === 'admin@example.com' && credentials.password === 'admin123') {
-          console.log('Mock admin login successful');
-          const mockToken = 'mock-admin-token-' + Date.now();
-          localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('userRole', 'admin');
-          sessionStorage.setItem('freshLogin', 'true');
-          return { 
-            access_token: mockToken, 
-            role: 'admin',
-            message: 'Mock admin login successful' 
-          };
-        }
-        
-        // Mock interviewer login
-        if (credentials.email === 'interviewer@example.com' && credentials.password === 'password123') {
-          console.log('Mock interviewer login successful');
-          const mockToken = 'mock-interviewer-token-' + Date.now();
-          localStorage.setItem('authToken', mockToken);
-          localStorage.setItem('userRole', 'interviewer');
-          sessionStorage.setItem('freshLogin', 'true');
-          return { 
-            access_token: mockToken, 
-            role: 'interviewer',
-            message: 'Mock interviewer login successful' 
-          };
-        }
-        
-        // Mock pending account for demo purposes
-        if (credentials.email === 'pending@example.com' && credentials.password === 'pending123') {
-          console.log('Mock pending account login');
-          const pendingToken = 'mock-pending-token-' + Date.now();
-          localStorage.setItem('pendingToken', pendingToken);
-          localStorage.setItem('userRole', 'pending');
-          return {
-            pending_token: pendingToken,
-            status: 'pending',
-            message: 'Account requires payment to activate',
-            requiresPayment: true
-          };
-        }
-      }
-      
-      // Try real API call if mock credentials failed or we're in production
-      console.log('Attempting real API login');
-      
-      // Special handling for FastAPI's OAuth2PasswordRequestForm format
-      // FastAPI expects form data, not JSON for the standard OAuth2 password flow
-      const formData = new FormData();
-      formData.append('username', credentials.email);
-      formData.append('password', credentials.password);
-      
-      // Use URLSearchParams format which is what FastAPI expects
-      const requestBody = new URLSearchParams();
-      requestBody.append('username', credentials.email);
-      requestBody.append('password', credentials.password);
-      
-      console.log('Sending login request with form data');
-      
-      // The correct endpoint URL and request format based on FastAPI OAuth2 requirements
-      const response = await api.post('/v1/auth/login', requestBody, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
+      const response = await authAPI.login(credentials);
       
       console.log('API login response:', response);
       
-      if (response.data && response.data.status === 'pending') {
+      // Normalize the response data - handle both axios wrapping and direct response
+      const data = response.data || response;
+      
+      if (data && data.status === 'pending') {
         // Handle pending account that needs payment
         console.log('Account requires payment to activate');
-        localStorage.setItem('pendingToken', response.data.pending_token);
+        localStorage.setItem('pendingToken', data.pending_token);
         localStorage.setItem('userRole', 'pending');
         return {
-          ...response.data,
+          ...data,
           requiresPayment: true
         };
-      } else if (response.data && response.data.access_token) {
-        // Store token in localStorage for app-wide access
-        localStorage.setItem('authToken', response.data.access_token);
+      } else if (data && (data.access_token || data.token)) {
+        // Store token in localStorage
+        const token = data.access_token || data.token;
+        localStorage.setItem('authToken', token);
         
         // Parse and store role
-        const userRole = this._parseUserRole(response.data.access_token);
+        const userRole = data.role || this._parseUserRole(token);
         localStorage.setItem('userRole', userRole);
         
         // Set fresh login indicator
         sessionStorage.setItem('freshLogin', 'true');
         
         return {
-          ...response.data,
-          role: userRole
-        };
-      } else if (response.data && response.data.token) {
-        // Alternative token field name
-        localStorage.setItem('authToken', response.data.token);
-        
-        // Use provided role or parse from token
-        const userRole = response.data.role || this._parseUserRole(response.data.token);
-        localStorage.setItem('userRole', userRole);
-        
-        // Set fresh login indicator
-        sessionStorage.setItem('freshLogin', 'true');
-        
-        return {
-          access_token: response.data.token,
+          access_token: token,
           role: userRole,
-          ...response.data
+          ...data
         };
       } else {
+        console.error('Unrecognized response format:', data);
         throw new Error('Invalid response format from authentication server');
       }
     } catch (error) {
@@ -185,13 +146,21 @@ class AuthService {
         }
       }
       
-      // Try mock login as fallback in development if backend is unreachable
-      if (process.env.NODE_ENV !== 'production' && (error.message.includes('Network Error') || error.code === 'ECONNREFUSED')) {
-        console.log('Backend unreachable, trying fallback mock auth');
-        return this.login(credentials); // Re-try with mock auth
-      }
-      
       ErrorService.handleError('Login failed', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get user profile information
+   * @returns {Promise} - Promise with user profile data
+   */
+  async getUserProfile() {
+    try {
+      const response = await authAPI.getUserProfile();
+      return response;
+    } catch (error) {
+      ErrorService.handleError('Failed to fetch user profile', error);
       throw error;
     }
   }
@@ -203,10 +172,24 @@ class AuthService {
    */
   async changePassword(passwordData) {
     try {
-      const response = await api.post('/auth/change-password', passwordData);
+      const response = await authAPI.changePassword(passwordData);
       return response.data;
     } catch (error) {
       ErrorService.handleError('Password change failed', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Create customer portal session for managing subscription
+   * @returns {Promise} - Promise with portal URL
+   */
+  async createCustomerPortalSession() {
+    try {
+      const response = await authAPI.createCustomerPortalSession();
+      return response.data;
+    } catch (error) {
+      ErrorService.handleError('Failed to create customer portal session', error);
       throw error;
     }
   }
@@ -226,9 +209,11 @@ class AuthService {
     localStorage.removeItem('authToken');
     localStorage.removeItem('pendingToken');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('companyLogo');
     
     // If navigate function is provided, redirect to login with state
     if (navigate) {
+      // Navigate to the interviewer login page
       navigate('/interviewer/login', { 
         replace: true, 
         state: { 
@@ -329,7 +314,7 @@ class AuthService {
         return 'admin';
       }
       
-      return role || null;
+      return role || 'interviewer'; // Default to interviewer if no role found
     } catch (e) {
       console.error('Error parsing JWT token:', e);
       return null;
@@ -337,4 +322,9 @@ class AuthService {
   }
 }
 
-export default new AuthService();
+// Create an instance of the AuthService class
+const authServiceInstance = new AuthService();
+
+// Export the instance
+export default authServiceInstance;
+

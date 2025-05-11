@@ -26,7 +26,7 @@ import {
   Cancel as CancelIcon,
   SubscriptionsOutlined as SubscriptionIcon
 } from '@mui/icons-material';
-import authAPI from '../../api/auth-api';
+import { authAPI } from '../../api';
 
 const UserProfile = () => {
   const [profile, setProfile] = useState(null);
@@ -77,9 +77,11 @@ const UserProfile = () => {
 
   const handleUpdateProfile = async () => {
     try {
-      // This would normally send an update request to the backend
-      // For now, just update the local state
-      setProfile(updatedProfile);
+      // Make API call to update user profile
+      const response = await authAPI.updateUserProfile(updatedProfile);
+      
+      // Update local state with response data
+      setProfile(response.data || updatedProfile);
       setEditMode(false);
       setNotification({
         open: true,
@@ -90,7 +92,7 @@ const UserProfile = () => {
       console.error('Failed to update profile:', error);
       setNotification({
         open: true,
-        message: 'Failed to update profile. Please try again.',
+        message: error.response?.data?.detail || 'Failed to update profile. Please try again.',
         severity: 'error'
       });
     }
@@ -100,19 +102,8 @@ const UserProfile = () => {
     setNotification({ ...notification, open: false });
   };
 
-  // Fallback user data when API doesn't return all fields - matches backend structure
-  const defaultUser = {
-    username: localStorage.getItem('username') || 'Interviewer User',
-    email: 'user@example.com',
-    company: 'Example Organization',
-    is_active: true,
-    subscription_plan: 'free',
-    subscription_end_date: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
-    created_at: new Date().toISOString(),
-    ...profile
-  };
-
-  const user = profile || defaultUser;
+  // Use profile data directly - no default fallback needed
+  const user = profile || {};
 
   const getSubscriptionStatusColor = (isActive) => {
     return isActive ? 'success' : 'error';
@@ -238,40 +229,47 @@ const UserProfile = () => {
               {user.username}
             </Typography>
             
-            <Card elevation={0} sx={{ 
-              mt: 4, 
-              width: '100%', 
-              border: '1px solid', 
-              borderColor: 'divider',
-              borderRadius: 2
-            }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Subscription Information
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Chip 
-                    label={user.is_active ? "Active" : "Expired"}
-                    color={getSubscriptionStatusColor(user.is_active)}
-                    size="small"
-                    sx={{ mb: 1 }}
-                  />
-                  <Typography variant="body1" fontWeight="medium">
-                    {user.subscription_plan.charAt(0).toUpperCase() + user.subscription_plan.slice(1)} Plan
+            {/* Only show subscription info if available */}
+            {user.subscription_plan && (
+              <Card elevation={0} sx={{ 
+                mt: 4, 
+                width: '100%', 
+                border: '1px solid', 
+                borderColor: 'divider',
+                borderRadius: 2
+              }}>
+                <CardContent>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Subscription Information
                   </Typography>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    mt: 1
-                  }}>
-                    <CalendarIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2">
-                      {user.is_active ? 'Renews' : 'Expired'}: {formatDate(user.subscription_end_date)}
+                  <Box sx={{ mt: 2 }}>
+                    <Chip 
+                      label={user.is_active ? "Active" : "Expired"}
+                      color={getSubscriptionStatusColor(user.is_active)}
+                      size="small"
+                      sx={{ mb: 1 }}
+                    />
+                    <Typography variant="body1" fontWeight="medium">
+                      {user.subscription_plan ? 
+                        `${user.subscription_plan.charAt(0).toUpperCase() + user.subscription_plan.slice(1)} Plan` : 
+                        'No Plan'}
                     </Typography>
+                    {user.subscription_end_date && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        mt: 1
+                      }}>
+                        <CalendarIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2">
+                          {user.is_active ? 'Renews' : 'Expired'}: {formatDate(user.subscription_end_date)}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
-                </Box>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </Grid>
 
           <Grid item xs={12} md={8}>
@@ -390,12 +388,16 @@ const UserProfile = () => {
                         Current Plan
                       </Typography>
                       <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {user.subscription_plan.charAt(0).toUpperCase() + user.subscription_plan.slice(1)}
-                        <Chip 
-                          label={user.is_active ? "Active" : "Expired"}
-                          color={getSubscriptionStatusColor(user.is_active)}
-                          size="small"
-                        />
+                        {user.subscription_plan ? 
+                          `${user.subscription_plan.charAt(0).toUpperCase() + user.subscription_plan.slice(1)}` : 
+                          'No Plan'}
+                        {user.subscription_plan && (
+                          <Chip 
+                            label={user.is_active ? "Active" : "Expired"}
+                            color={getSubscriptionStatusColor(user.is_active)}
+                            size="small"
+                          />
+                        )}
                       </Typography>
                     </Box>
                   </Box>

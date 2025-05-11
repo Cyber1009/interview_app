@@ -1,0 +1,60 @@
+/**
+ * Core Application Styles
+ * Provides:
+ * - Base application styling
+ * - Video container styles
+ * - Common utility classes
+ * - Cross-browser compatibility fixes
+ */
+
+/* Common styles */
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.interview-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.video-container {
+  margin: 20px 0;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 8px;
+}
+
+.video-preview {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 8px;
+  transform: translateZ(0); /* Force hardware acceleration */
+  backface-visibility: hidden; /* Prevent flickering */
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+}
+
+.video-container video {
+  transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.video-container.video {
+  transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Remove unused classes */

@@ -16,6 +16,8 @@ import {
   Stepper, Step, StepLabel, StepContent, Alert,
   FormControl, InputLabel, MenuItem, Select, Chip
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { isVeryLightColor, getContrastColor } from '../../utils/colorUtils';
 import { 
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -26,9 +28,10 @@ import {
   QuestionAnswer as QuestionIcon
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { InterviewService } from '../../services';
+import { interviewerAPI } from '../../api';
 
 const CreateInterview = () => {
+  const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [interview, setInterview] = useState({
     title: '',
@@ -117,8 +120,8 @@ const CreateInterview = () => {
       setLoading(true);
       setError(null);
 
-      // In a real implementation, this would call your API through the InterviewService
-      // await InterviewService.create({
+      // In a real implementation, this would call your API through the interviewerAPI
+      // await interviewerAPI.createInterview({
       //   title: interview.title,
       //   description: interview.description,
       //   questions: interview.selectedQuestions.map((q, index) => ({ 
@@ -321,18 +324,37 @@ const CreateInterview = () => {
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   <strong>Description:</strong> {interview.description}
                 </Typography>
-              )}
-              <Typography variant="subtitle1" sx={{ mt: 2 }}>
+              )}              <Typography variant="subtitle1" sx={{ mt: 2 }}>
                 <strong>Questions:</strong> {interview.selectedQuestions.length}
               </Typography>
               <Box sx={{ mt: 1, mb: 2 }}>
-                {interview.selectedQuestions.map((q, index) => (
-                  <Chip 
-                    key={q.id}
-                    label={`Q${index + 1}: ${q.text.substring(0, 20)}${q.text.length > 20 ? '...' : ''}`}
-                    sx={{ m: 0.5 }}
-                  />
-                ))}
+                {interview.selectedQuestions.map((q, index) => {
+                  // Use theme values from the component level theme
+                  const chipColor = index % 2 === 0 ? theme.palette.primary.main : (theme.custom?.accentColor || theme.palette.secondary.main);
+                  
+                  // Get contrasting text color
+                  const textColor = getContrastColor(chipColor);
+                  
+                  // Handle very light colors by adding a border
+                  const isVeryLight = isVeryLightColor(chipColor);
+                  
+                  return (
+                    <Chip 
+                      key={q.id}
+                      label={`Q${index + 1}: ${q.text.substring(0, 20)}${q.text.length > 20 ? '...' : ''}`}
+                      sx={{ 
+                        m: 0.5, 
+                        bgcolor: chipColor,
+                        color: textColor,
+                        border: isVeryLight ? '1px solid rgba(0,0,0,0.12)' : 'none',
+                        '&:hover': {
+                          bgcolor: chipColor,
+                          opacity: 0.9
+                        }
+                      }}
+                    />
+                  );
+                })}
               </Box>
               <Typography variant="subtitle1" sx={{ mt: 2 }}>
                 <strong>Access Tokens:</strong> {interview.tokenCount}

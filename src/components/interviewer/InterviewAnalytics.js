@@ -8,14 +8,23 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
-  Container, Typography, Box, Paper, Grid, 
-  Card, CardContent, CardHeader, Divider,
+  Box, Typography, Grid, Card, CardContent, 
+  Paper, CircularProgress, Alert, Container,
   FormControl, InputLabel, Select, MenuItem,
-  Tab, Tabs, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow
+  Table, TableBody, TableCell, TableContainer, 
+  TableHead, TableRow, Tabs, Tab, Divider,
+  CardHeader
 } from '@mui/material';
-import { InterviewService, RecordingService } from '../../services';
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, 
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  ResponsiveContainer, Cell
+} from 'recharts';
+
+// Import from consolidated API structure
+import { interviewerAPI } from '../../api';
 
 const InterviewAnalytics = () => {
   const [loading, setLoading] = useState(true);

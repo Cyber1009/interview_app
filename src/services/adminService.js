@@ -1,133 +1,100 @@
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
+
 /**
  * Admin Service
- * Handles:
- * - User management
- * - Account activation
- * - Interview management
- * - System configuration
- * - Admin-specific operations
+ * Provides access to admin-specific backend endpoints, focusing only on supported features
  */
+const api = axios.create({
+  baseURL: API_BASE_URL || 'http://localhost:8000/api/v1'
+});
 
-import api from './api';
-import { ErrorService } from './index';
-
-class AdminService {
-  /**
-   * Create a new admin user
-   * @param {Object} userData - User data with username and password
-   * @returns {Promise} - Promise with user creation result
-   */
-  async createAdminUser(userData) {
-    try {
-      const response = await api.post('/admin/users', userData);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to create admin user', error);
-      throw error;
-    }
+// Add auth token to all requests
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  /**
-   * Activate a user account
-   * @param {number} userId - User ID to activate
-   * @param {Object} activationData - Activation data including subscription details
-   * @returns {Promise} - Promise with activation result
-   */
-  async activateAccount(userId, activationData) {
-    try {
-      const response = await api.post(`/admin/users/${userId}/activate`, activationData);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to activate account', error);
-      throw error;
-    }
+const AdminService = {
+  // Authentication
+  login: (credentials) => {
+    return api.post('/admin/auth/login', credentials, {
+      // Using multipart form data format for OAuth2 password flow
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+  },
+  
+  logout: () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
+    return Promise.resolve();
+  },
+  
+  isAuthenticated: () => {
+    return !!localStorage.getItem('adminToken');
+  },
+  
+  changePassword: (passwordData) => {
+    return api.post('/admin/auth/change-password', passwordData);
+  },
+  
+  // User Management
+  getAllUsers: (params = {}) => {
+    // Transform params into query string format
+    // Support for filters, search, pagination, etc.
+    return api.get('/admin/users', { params });
+  },
+  
+  getUser: (userId) => {
+    return api.get(`/admin/users/${userId}`);
+  },
+  
+  createUser: (userData) => {
+    return api.post('/admin/users', userData);
+  },
+  
+  updateUser: (userId, userData) => {
+    return api.put(`/admin/users/${userId}`, userData);
+  },
+  
+  deleteUser: (userId) => {
+    return api.delete(`/admin/users/${userId}`);
+  },
+  
+  // Pending Accounts
+  getPendingAccounts: () => {
+    return api.get('/admin/users/pending');
+  },
+  
+  activatePendingAccount: (accountId, activationData) => {
+    return api.post(`/admin/users/pending/${accountId}/activate`, activationData);
+  },
+  
+  deletePendingAccount: (accountId) => {
+    return api.delete(`/admin/users/pending/${accountId}`);
+  },
+  
+  // System Status & Utilities
+  getSystemStatus: () => {
+    return api.get('/admin/system/status');
+  },
+  
+  getSystemSettings: () => {
+    return api.get('/admin/system/settings');
+  },
+  
+  updateSystemSettings: (settingsData) => {
+    return api.put('/admin/system/settings', settingsData);
+  },
+  
+  fixInvalidQuestions: (data) => {
+    return api.post('/admin/system/fix-invalid-questions', data);
   }
+};
 
-  /**
-   * Get all pending registrations
-   * @returns {Promise} - Promise with pending registrations
-   */
-  async getPendingRegistrations() {
-    try {
-      const response = await api.get('/admin/registrations/pending');
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch pending registrations', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all active users
-   * @returns {Promise} - Promise with active users
-   */
-  async getActiveUsers() {
-    try {
-      const response = await api.get('/admin/users');
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch users', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get interview results
-   * @returns {Promise} - Promise with interview results
-   */
-  async getInterviewResults() {
-    try {
-      const response = await api.get('/admin/interviews/results');
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch interview results', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create interview access token
-   * @param {Object} tokenData - Token data including interview_id
-   * @returns {Promise} - Promise with token creation result
-   */
-  async createInterviewToken(tokenData) {
-    try {
-      const response = await api.post('/admin/tokens', tokenData);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to create interview token', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all interview tokens
-   * @returns {Promise} - Promise with interview tokens
-   */
-  async getAllTokens() {
-    try {
-      const response = await api.get('/admin/tokens');
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to fetch tokens', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete an interview token
-   * @param {string} token - Token value to delete
-   * @returns {Promise} - Promise with deletion result
-   */
-  async deleteToken(token) {
-    try {
-      const response = await api.delete(`/admin/tokens/${token}`);
-      return response.data;
-    } catch (error) {
-      ErrorService.handleError('Failed to delete token', error);
-      throw error;
-    }
-  }
-}
-
-export default new AdminService();
+export default AdminService;

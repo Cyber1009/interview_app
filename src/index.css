@@ -1,32 +1,73 @@
 /**
  * Global CSS Styles
- * Defines:
- * - CSS variables for theming
+ * 
+ * This file provides:
+ * - CSS variables derived from our theme.js for use in non-MUI components
  * - Base element styles
- * - Font configurations
+ * - Font configuration
  * - Global transitions
  * - CSS reset and normalization
  */
 
 :root {
-  --primary: #1976d2;
-  --secondary: #dc004e;
-  --background: #ffffff;
-  --surface: #f5f5f5;
-  --text: #000000;
-  --textSecondary: #666666;
-  --accent: #2196f3;
-  --error: #f44336;
+  /* Primary colors - these match our theme.js color definitions */
+  --primary: #091326;
+  --primary-light: #1a233a;
+  --primary-dark: #050a15;
+  
+  /* Neutral colors */
+  --gray: #52606d;
+  --gray-light: #d1d5db;
+  --gray-lighter: #e5eaf1;
+  --gray-lightest: #f5f7fa;
+  --gray-medium: #b6c2c9;
+  --gray-dark: #3a4550;
+  
+  /* UI colors */
+  --background: #b6c2c9;
+  --surface: #ffffff;
+  --text: #091326;
+  --text-secondary: #52606d;
+  
+  /* Status colors */
+  --success: #7bae7e;
   --warning: #ff9800;
-  --success: #4caf50;
+  --error: #e75552;
+  --info: #2196f3;
+  
+  /* Common */
+  --white: #ffffff;
+  --black: #000000;
   --divider: #e0e0e0;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 8px 0 rgba(9,19,38,0.08);
+  --shadow-md: 0 4px 24px 0 rgba(80,86,96,0.10);
+  --shadow-lg: 0 8px 32px 0 rgba(80,86,96,0.18);
+  
+  /* Animation */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* Border radius */
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 18px;
+  --border-radius-xl: 24px;
+  --border-radius-round: 50%;  /* Theme CSS variables for real-time color changes */
+  --theme-background-color: transparent;
+  --theme-background-paper: transparent; /* New variable for paper elements */
+  --theme-primary-color: var(--primary);
+  --theme-accent-color: var(--info);
+  --theme-text-color: var(--text);
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 body {
@@ -36,9 +77,57 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background);
+  color: var(--text);
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Global focus styles for accessibility */
+:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Global media query for reduced motion preference */
+@media (prefers-reduced-motion) {
+  * {
+    transition: none !important;
+  }
+}
+
+/* Specific styles for the theme settings page */
+.main-content-area {
+  background-color: var(--theme-background-color, #f5f5f5);
+}
+
+/* Card styles */
+.MuiCard-root, .MuiPaper-root {
+  background-color: var(--theme-background-paper, white) !important;
+}
+
+.color-selector-container {
+  background-color: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Make nav items in drawer stand out better */
+.MuiDrawer-paper .MuiListItem-button {
+  margin: 2px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+/* Ensure navigation text is always readable */
+.MuiDrawer-paper .MuiListItem-button.Mui-selected,
+.MuiDrawer-paper .MuiListItem-button:hover {
+  background-color: rgba(25, 118, 210, 0.15) !important; 
+}
+
+.MuiDrawer-paper .MuiListItem-button.Mui-selected .MuiListItemText-primary,
+.MuiDrawer-paper .MuiListItem-button.Mui-selected .MuiListItemIcon-root {
+  color: #1976d2 !important;
 }

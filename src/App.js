@@ -8,151 +8,288 @@
  * - API service integration
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, createContext, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import './App.css';
 
-// Import all components
+// Import theme configuration
+import { colors, componentColors, createThemeOptions } from './styles/theme';
+
+// Import all components using the reorganized structure
 import {
-  CandidateLogin,
-  InterviewAccess,
+  // Auth components
   InterviewerLogin,
-  ProtectedRoute,
-  AccessToken,
-  SetQuestion,
-  InterviewResults,
-  ConfigManager,
+  AdminLogin,
+  Register,
+  
+  // Candidate components
+  InterviewAccess,
   Welcome,
   Instructions,
   Interview,
   ThankYou,
-  ErrorBoundary,
+  
+  // Admin components
+  AdminPanel,
+  
+  // Core components
   NotFound,
-  Layout
+  ErrorBoundary,
+  ProtectedRoute,
+  
+  // Interviewer components
+  InterviewerPanel,
+  
+  // Payment components
+  Subscription
 } from './components';
 
-// Import admin panel directly to avoid circular dependencies
-import AdminPanel from './components/admin/AdminPanel';
-
-// Import interviewer panel
-import InterviewerPanel from './components/interviewer/InterviewerPanel';
-
-// Import subscription component
-import Subscription from './components/payment/Subscription';
-
 // Import services
-import { AuthService, ThemeService } from './services';
+import { ThemeService } from './services';
+import authService from './services/authService';
+
+// Create authentication context
+export const AuthContext = createContext({
+  isAuthenticated: false,
+  userRole: null,
+  onLogin: () => {},
+  onLogout: () => {},
+});
 
 function App() {
-  const [theme, setTheme] = useState(() => {
-    // Get theme from local storage or use default
-    const savedTheme = ThemeService.getLocalTheme();
+  // Remove dark mode state completely - always use light mode
+  const [themeColors, setThemeColors] = useState({
+    primary: colors.primary,
+    secondary: colors.secondary
+  });
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isAuthenticated());
+  const [userRole, setUserRole] = useState(() => authService.getUserRole());
+  const [themeInitialized, setThemeInitialized] = useState(false);
+  // Create theme with light mode only
+  const theme = useMemo(() => {
+    const mode = 'light'; // Force light mode always
+    const themeOptions = createThemeOptions(mode);
+    
+    // Apply custom colors from state
     return createTheme({
-      palette: savedTheme ? savedTheme.palette : {
-        primary: { main: '#1976d2' },
-        secondary: { main: '#9c27b0' },
-        background: { default: '#f8fafc', paper: '#ffffff' },
-        text: { primary: '#1a2027', secondary: '#637381' }
-      },
-      components: {
-        MuiButton: {
-          styleOverrides: {
-            root: {
-              borderRadius: 8,
-              padding: '8px 16px',
+      ...themeOptions,
+      palette: {
+        ...themeOptions.palette,
+        mode, // Always light mode
+        primary: {
+          main: (function() {
+            // Prevent white/too light colors as primary
+            const primaryColor = themeColors.primary || colors.primary;
+            if (primaryColor === '#ffffff' || primaryColor === 'white' || 
+                (primaryColor.startsWith('#') && parseInt(primaryColor.substr(1), 16) > 0xefefef)) {
+              console.log('[App] Primary color was too light, using blue instead');
+              return '#1976d2'; // Use blue for better visibility
             }
-          }
+            return primaryColor;
+          })(),
+          light: themeColors.primaryLight || colors.primaryLight,
+          dark: themeColors.primaryDark || colors.primaryDark,
+          contrastText: '#ffffff',
+        },
+        secondary: {
+          main: themeColors.secondary || colors.gray, 
+          light: themeColors.secondaryLight || colors.grayLight,
+          dark: themeColors.secondaryDark || colors.grayDark,
+          contrastText: '#ffffff',
+        },        background: {
+          default: themeColors.background || themeOptions.palette.background.default,
+          // Use CSS variables for paper backgrounds to ensure they're transparent when needed
+          paper: 'var(--theme-background-paper, ' + themeOptions.palette.background.paper + ')',
+          elevation1: themeOptions.palette.background.elevation1,
+          elevation2: themeOptions.palette.background.elevation2,
+          elevation3: themeOptions.palette.background.elevation3
+        },
+        text: {
+          primary: themeColors.textColor || themeOptions.palette.text.primary,
+          secondary: themeOptions.palette.text.secondary,
+          disabled: themeOptions.palette.text.disabled
         }
       }
     });
-  });
-  
-  // Add company logo state
-  const [logo, setLogo] = useState(() => {
-    // Get logo from local storage or use default
-    return localStorage.getItem('companyLogo') || null;
-  });
+  }, [themeColors]);
 
-  const handleThemeChange = (newTheme) => {
-    const updatedTheme = createTheme(newTheme);
-    setTheme(updatedTheme);
-    ThemeService.saveThemeLocally({
-      palette: updatedTheme.palette
-    });
+  // Initial theme setup based on stored preferences
+  useEffect(() => {
+    const initializeTheme = async () => {
+      try {
+        // Apply theme from ThemeService which handles multiple sources
+        const themeData = await ThemeService.getActiveTheme();
+        
+        if (themeData) {
+          console.log("[App] Initializing theme with:", themeData);
+          setThemeColors({
+            primary: themeData.primaryColor || colors.primary,
+            secondary: themeData.secondaryColor || colors.gray,
+            background: themeData.backgroundColor || undefined,
+            textColor: themeData.textColor || undefined
+          });
+        }
+        
+        setThemeInitialized(true);
+      } catch (error) {
+        console.error("[App] Failed to initialize theme:", error);
+        setThemeInitialized(true); // Mark as initialized even if there was an error
+      }
+    };
+    
+    initializeTheme();
+  }, [isAuthenticated]); // Re-run when authentication state changes
+
+  // Function to handle theme changes from InterviewerPanel
+  const handleThemeChange = useCallback((newThemeOptions) => {
+    console.log("[App] Handling theme change:", newThemeOptions);
+    if (!newThemeOptions || !newThemeOptions.palette) return;
+    
+    // Extract relevant colors from the theme options
+    const updatedColors = {
+      primary: newThemeOptions.palette.primary?.main || colors.primary,
+      secondary: newThemeOptions.palette.secondary?.main || colors.gray,
+      background: newThemeOptions.palette.background?.default,
+      textColor: newThemeOptions.palette.text?.primary
+    };
+    
+    // Apply CSS variable for immediate background color transitions
+    if (updatedColors.background) {
+      document.documentElement.style.setProperty('--theme-temp-background', updatedColors.background);
+    }
+    
+    console.log("[App] Setting theme colors to:", updatedColors);
+    setThemeColors(updatedColors);
+    
+    // Store theme in ThemeService to persist changes
+    ThemeService.saveThemeLocally(newThemeOptions);
+  }, []);
+
+  // Function to handle successful login
+  const handleLoginSuccess = async () => {
+    setIsAuthenticated(true);
+    setUserRole(authService.getUserRole());
+    
+    // Force theme refresh on login
+    try {
+      // Clear any cached theme data
+      ThemeService.clearCachedTheme();
+      
+      // Fetch and apply the latest theme
+      const themeData = await ThemeService.getActiveTheme(true); // force refresh
+      
+      if (themeData) {
+        setThemeColors({
+          primary: themeData.primaryColor || colors.primary,
+          secondary: themeData.secondaryColor || colors.secondary,
+          background: themeData.backgroundColor,
+          textColor: themeData.textColor
+        });
+      }
+    } catch (error) {
+      console.error("Failed to refresh theme after login:", error);
+    }
   };
   
-  // Add logo change handler
-  const handleLogoChange = (logoData) => {
-    setLogo(logoData);
-    // If logoData is null, removeItem is called; otherwise, setItem
-    if (logoData === null) {
-      localStorage.removeItem('companyLogo');
-    } else {
-      localStorage.setItem('companyLogo', logoData);
-    }
+  // Function to handle logout
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserRole(null);
+    
+    // Reset theme to defaults
+    setThemeColors({
+      primary: colors.primary,
+      secondary: colors.secondary
+    });
+  };
+
+  // Create authentication context value
+  const authContextValue = {
+    isAuthenticated,
+    userRole,
+    onLogin: handleLoginSuccess,
+    onLogout: handleLogout,
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <ErrorBoundary>
-        <Router>
-          <Routes>
-            {/* Public routes - Changed to direct candidates to welcome page first */}
-            <Route path="/" element={<Navigate to="/welcome" replace />} />
-            <Route path="/welcome" element={<Welcome />} />
-            <Route path="/interview-access" element={<InterviewAccess />} />
-            <Route path="/interviewer/login" element={<InterviewerLogin />} />
-            <Route path="/admin/login" element={<InterviewerLogin />} />
-            
-            {/* Payment/Subscription route - Allow pending account access */}
-            <Route path="/subscription" element={
-              AuthService.hasPendingAccount() || AuthService.isAuthenticated() ? 
-                <Subscription /> : 
-                <Navigate to="/interviewer/login" replace />
-            } />
-            
-            {/* Protected interviewer routes with new dashboard layout */}
-            <Route 
-              path="/interviewer/*" 
-              element={
-                <ProtectedRoute>
-                  <InterviewerPanel onThemeChange={handleThemeChange} onLogoChange={handleLogoChange} />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Admin routes with new dashboard layout */}
-            <Route 
-              path="/admin/*" 
-              element={
-                <ProtectedRoute adminRequired>
-                  <AdminPanel onThemeChange={handleThemeChange} onLogoChange={handleLogoChange} />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Candidate Routes */}
-            <Route path="/instructions" element={<Instructions />} />
-            <Route 
-              path="/interview/:interviewId" 
-              element={
-                <ProtectedRoute>
-                  <Interview />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="/thank-you" element={<ThankYou />} />
-            
-            {/* Legacy route - redirect to new interview access */}
-            <Route path="/interview/:token" element={<Navigate to="/interview-access" replace />} />
-            
-            {/* Redirect unknown paths to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </ErrorBoundary>
-    </ThemeProvider>
+    <AuthContext.Provider value={authContextValue}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {themeInitialized && (
+          <Router>
+            <Routes>
+              {/* Public routes accessible without login */}
+              <Route path="/" element={<Welcome />} />
+              <Route path="/interview-access" element={<InterviewAccess />} />
+              <Route path="/instructions" element={<Instructions />} />
+              <Route path="/interview/:interviewId" element={<Interview />} />
+              <Route path="/thank-you" element={<ThankYou />} />
+              
+              {/* Login routes */}
+              <Route 
+                path="/interviewer/login" 
+                element={
+                  isAuthenticated ? 
+                    <Navigate to="/interviewer/dashboard" /> : 
+                    <InterviewerLogin onLoginSuccess={handleLoginSuccess} />
+                } 
+              />
+              <Route 
+                path="/register" 
+                element={<Register />} 
+              />
+              
+              {/* Admin routes */}
+              <Route
+                path="/admin/login"
+                element={
+                  isAuthenticated && userRole === 'admin' ?
+                    <Navigate to="/admin/dashboard" /> :
+                    <AdminLogin onLoginSuccess={handleLoginSuccess} />
+                }
+              />
+              <Route
+                path="/admin/dashboard/*"
+                element={
+                  isAuthenticated && userRole === 'admin' ?
+                    <AdminPanel /> :
+                    <Navigate to="/admin/login" />
+                }
+              />
+              
+              {/* Interviewer routes */}
+              <Route
+                path="/interviewer/*"
+                element={
+                  isAuthenticated && (userRole === 'interviewer' || userRole === 'admin') ?
+                    <InterviewerPanel onThemeChange={handleThemeChange} /> :
+                    <Navigate to="/interviewer/login" />
+                }
+              />
+              
+              {/* Subscription and payment routes */}
+              <Route path="/subscription" element={<Subscription />} />
+              
+              {/* Fallback route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        )}
+        {!themeInitialized && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh'
+          }}>
+            Loading...
+          </div>
+        )}
+      </ThemeProvider>
+    </AuthContext.Provider>
   );
 }
 

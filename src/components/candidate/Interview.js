@@ -10,46 +10,29 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container,
   Paper,
-  Typography,
-  Button,
-  Box,
-  LinearProgress,
-  Card,
-  CardContent,
-  Alert,
-  Fade,
-  CircularProgress,
+  useTheme
 } from '@mui/material';
-import { 
-  FiberManualRecord, 
-  Stop, 
-  Timer, 
-  Warning,
-  AccessTime,
-} from '@mui/icons-material';
 import VideoReview from './VideoReview';
 import VideoRecorder from './VideoRecorder';
 import QuestionDisplay from './QuestionDisplay';
 import TimerComponent from './TimerComponent';
 import ProgressTracker from './ProgressTracker';
-
-const buttonSx = {
-  px: 4,
-  py: 1.5,
-  fontSize: '1.1rem'
-};
+import { candidatesAPI } from '../../api'; // Updated to use consolidated API
+import { ThemeService } from '../../services';
 
 function Interview() {
+  const { interviewId } = useParams(); // Get interview ID from URL params
+  const [sessionId, setSessionId] = useState(null);
   const [questions, setQuestions] = useState(() => {
     const storedQuestions = JSON.parse(localStorage.getItem('interviewQuestions'));
     // Instead of using imported practice question, create it inline
     const practiceQ = {
       id: 0,
-      text: "Introduce yourslef.",
+      text: "Introduce yourself.",
       preparationTime: 10,
       recordingTime: 10,
       isPractice: true
@@ -72,7 +55,6 @@ function Interview() {
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState([]);
   const [countdown, setCountdown] = useState(180);
   const [preparationTime, setPreparationTime] = useState(60);
   const [showPreview, setShowPreview] = useState(false);
@@ -80,8 +62,6 @@ function Interview() {
   const [stream, setStream] = useState(null);
   const [isPreparing, setIsPreparing] = useState(true);
   const [showWarning, setShowWarning] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [startTime, setStartTime] = useState(null);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isPracticeQuestion, setIsPracticeQuestion] = useState(true);
   const [isStartingRecording, setIsStartingRecording] = useState(false);
@@ -92,21 +72,112 @@ function Interview() {
   const preparationTimerRef = useRef(null);
   const chunksRef = useRef([]);
   const navigate = useNavigate();
+  const theme = useTheme();
 
+  // Effect to start interview session when component mounts - UPDATED to work with corrected API structure
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'interviewQuestions') {
-        const newQuestions = JSON.parse(e.newValue);
-        // Convert question objects to strings
-        const questionTexts = newQuestions.map(q => typeof q === 'object' ? q.text : q);
-        setQuestions(questionTexts);
+    // Create a session creation flag to prevent duplicate requests
+    let isSessionCreationAttempted = false;
+    
+    const startSession = async () => {
+      // Only attempt to create a session once
+      if (interviewId && !isSessionCreationAttempted && !sessionId) {
+        isSessionCreationAttempted = true;
+        
+        try {
+          // Get the stored interview token from localStorage
+          const token = localStorage.getItem('interviewToken');
+          
+          if (!token) {
+            console.error('No interview token found in localStorage');
+            navigate('/interview-access');
+            return;
+          }
+          
+          console.log('Getting interview by token:', token);
+          
+          try {
+            // First, just get interview details without creating a session
+            const interviewResponse = await candidatesAPI.getInterviewByToken(token);
+            console.log('Interview response:', interviewResponse);
+            
+            // If we have questions from the API, use those instead of default
+            if (interviewResponse.questions) {
+              const practiceQ = {
+                id: 0,
+                text: "Introduce yourself.",
+                preparationTime: 10,
+                recordingTime: 10,
+                isPractice: true
+              };
+              
+              setQuestions([
+                practiceQ, 
+                ...interviewResponse.questions.map(q => ({
+                  id: q.id,
+                  text: q.text,
+                  preparationTime: q.preparation_time || 60,
+                  recordingTime: q.responding_time || 120,
+                  isPractice: false
+                }))
+              ]);
+            }
+            
+            // Then separately create the session (this will mark the token as used)
+            // Only do this once to avoid "token already used" errors
+            try {
+              const sessionResponse = await candidatesAPI.startInterview({ token });
+              console.log('Session response:', sessionResponse);
+              
+              setSessionId(sessionResponse.id);
+            } catch (sessionError) {
+              console.error('Session creation error:', sessionError);
+              
+              // If session creation fails but we still have interview data,
+              // we can continue but some features might be limited
+              alert("Warning: There was an issue starting your interview session. You may continue, but your responses might not be recorded properly.");
+            }
+            
+            // Use the theme that was already fetched during token validation
+            const storedTheme = sessionStorage.getItem('interviewTokenTheme');
+            if (storedTheme) {
+              console.log('Using theme from token verification');
+            } else {
+              console.log('No theme found in sessionStorage, using default theme');
+            }
+          } catch (error) {
+            console.error('Interview data fetching error:', error);
+            
+            // Token validation failed - could be invalid
+            if (error.response && error.response.status === 400) {
+              // Clear the invalid token from storage
+              localStorage.removeItem('interviewToken');
+              
+              alert("This interview token is invalid or has already been used. Please request a new token.");
+              navigate('/interview-access');
+              return;
+            }
+            
+            // Other errors
+            alert("There was a problem accessing your interview data. Please try again.");
+            navigate('/instructions');
+          }
+        } catch (error) {
+          console.error('Failed to start interview session:', error);
+          navigate('/instructions');
+        }
       }
     };
     
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    startSession();
 
+    // Clear interview theme when component unmounts
+    return () => {
+      ThemeService.clearActiveInterviewTheme();
+    };
+  }, [interviewId, navigate, sessionId]);
+
+  // Initialize camera and microphone access
   useEffect(() => {
     const checkAndInitializeCamera = async () => {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -125,7 +196,6 @@ function Interview() {
           videoRef.current.srcObject = stream;
         }
         setStream(stream);
-        setIsInitialized(true);
         startPreparationTimer();
       } catch (err) {
         console.error("Camera access error:", err);
@@ -136,13 +206,13 @@ function Interview() {
     checkAndInitializeCamera();
 
     return () => stopCamera();
-  }, [navigate]);
+  }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (preparationTime === 0) {
       startRecording();  // Move startRecording() here to ensure it runs after state updates
     }
-  }, [preparationTime]);  // Only depend on preparationTime
+  }, [preparationTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (preparationTime === 0 && isPreparing) {
@@ -150,7 +220,7 @@ function Interview() {
       setShowWarning(false);
       startRecording();
     }
-  }, [preparationTime]);
+  }, [preparationTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleAutoStop = async () => {
@@ -167,7 +237,7 @@ function Interview() {
     };
   
     handleAutoStop();
-  }, [countdown, isRecording]);
+  }, [countdown, isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Update when question changes
@@ -184,24 +254,18 @@ function Interview() {
       setHasAnswered(false);
       startPreparationTimer();
     }
-  }, [currentQuestionIndex]); // Only depend on question index changes
+  }, [currentQuestionIndex, questions]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Format time helper function
   const formatTime = (seconds) => {
     const mins = Math.floor(Math.max(0, seconds) / 60);
     const secs = Math.max(0, seconds) % 60;
     return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
   };
 
-  const getAlertMessage = () => {
-    if (preparationTime > 10) {
-      return `You have ${preparationTime} seconds to prepare. You can start recording now or wait for automatic start.`;
-    } else {
-      return `Recording will start automatically in ${preparationTime} seconds! Click 'Start Recording' to begin early.`;
-    }
-  };
-
+  // Start preparation timer
   const startPreparationTimer = () => {
-    const currentPreparationTime = questions[currentQuestionIndex].preparationTime || 60;
+    const currentPreparationTime = questions[currentQuestionIndex]?.preparationTime || 60;
     setPreparationTime(currentPreparationTime);
     setIsPreparing(true);
     setShowWarning(false);
@@ -229,6 +293,7 @@ function Interview() {
     }, 100);
   };
 
+  // Stop camera function
   const stopCamera = () => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
@@ -241,6 +306,7 @@ function Interview() {
     }
   };
 
+  // Start recording function
   const startRecording = async () => {
     // Prevent multiple clicks while starting recording
     if (isStartingRecording || isRecording) return;
@@ -261,8 +327,7 @@ function Interview() {
       }
 
       chunksRef.current = [];
-      setRecordedChunks([]);
-      const currentQuestionTime = questions[currentQuestionIndex].recordingTime;
+      const currentQuestionTime = questions[currentQuestionIndex]?.recordingTime || 120;
       setCountdown(currentQuestionTime);
       
       if (!stream) {
@@ -317,6 +382,7 @@ function Interview() {
     }
   };
 
+  // Stop recording function
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       clearInterval(timerRef.current);
@@ -338,6 +404,7 @@ function Interview() {
     }
   };
 
+  // Handle preview close function
   const handlePreviewClose = async (action) => {
     if (!action || action === 'cancel') {
       return;
@@ -353,24 +420,17 @@ function Interview() {
       startPreparationTimer();
     } else if (action === 'continue') {
       // Upload video if it's not a practice question
-      if (!questions[currentQuestionIndex].isPractice && currentVideoBlob) {
+      if (!questions[currentQuestionIndex].isPractice && currentVideoBlob && sessionId) {
         try {
-          const formData = new FormData();
-          formData.append('video', currentVideoBlob, `question_${currentQuestionIndex}.webm`);
-          formData.append('questionId', currentQuestionIndex.toString());
-          
-          const response = await fetch('http://localhost:8000/api/upload-video', {
-            method: 'POST',
-            body: formData,
+          // Use the saveRecording API with the correct parameters
+          await candidatesAPI.saveRecording({
+            sessionId: sessionId,
+            questionId: questions[currentQuestionIndex].id,
+            audioFile: currentVideoBlob
           });
-
-          if (!response.ok) {
-            throw new Error('Video upload failed');
-          }
         } catch (error) {
-          console.error('Error uploading video:', error);
-          // Optionally show an error message to the user
-          // but continue with the interview process
+          console.error('Error uploading recording:', error);
+          // Continue with the interview process despite any errors
         }
       }
 
@@ -387,29 +447,23 @@ function Interview() {
         setIsPreparing(true);
         setShowWarning(false);
       } else {
+        // Complete the interview session
+        if (sessionId) {
+          try {
+            await candidatesAPI.completeInterview(sessionId);
+          } catch (error) {
+            console.error('Error completing interview:', error);
+          }
+        }
         stopCamera();
+        // Clear interview theme before navigating away
+        ThemeService.clearActiveInterviewTheme();
         navigate('/thank-you');
       }
     }
 
     setCurrentVideoBlob(null);
     chunksRef.current = [];
-    setRecordedChunks([]);
-  };
-
-  // Add a function to calculate progress
-  const calculateProgress = () => {
-    // Calculate progress based on current question (currentQuestionIndex + 1)
-    // Each question represents an equal portion of the total progress
-    return ((currentQuestionIndex + 1) / questions.length) * 100;
-  };
-
-  const renderQuestionHeader = () => {
-    if (isPracticeQuestion) {
-      return `Practice Question: ${questions[currentQuestionIndex].text}`;
-    }
-    // Add 1 to currentQuestionIndex to start regular questions at 1
-    return `Q${currentQuestionIndex}. ${questions[currentQuestionIndex].text}`;
   };
 
   return (
@@ -442,7 +496,7 @@ function Interview() {
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
           countdown={countdown}
-          questionDuration={questions[currentQuestionIndex].recordingTime}
+          questionDuration={questions[currentQuestionIndex]?.recordingTime || 0}
           formatTime={formatTime}
         />
 

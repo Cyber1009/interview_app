@@ -1,12 +1,30 @@
+/**
+ * API Axios Configuration
+ * 
+ * Configures the main axios instance used throughout the application
+ * for regular user API calls (non-admin functions).
+ * 
+ * Features:
+ * - Base URL configuration from environment
+ * - Automatic token inclusion in requests
+ * - Comprehensive error handling
+ * - Response normalization
+ */
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { handleApiError } from './utils/error-handler';
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: API_BASE_URL || 'http://localhost:8000/api'
+  baseURL: API_BASE_URL || 'http://localhost:8000/api/v1',
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' }
 });
 
-// Add auth token to all requests
+/**
+ * Request interceptor
+ * Adds authentication tokens to outgoing requests
+ */
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('authToken');
   const pendingToken = localStorage.getItem('pendingToken');
@@ -27,26 +45,39 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Add response interceptor for better error logging
+/**
+ * Response interceptor
+ * Handles successful responses and errors in a consistent way
+ */
 api.interceptors.response.use(
-  response => response,
-  error => {
+  // Return data directly for successful responses
+  response => response.data,
+  
+  // Handle errors
+  async (error) => {
+    // Log error details for debugging
     if (error.response) {
-      // The request was made and the server responded with a status code
       console.error('API Error Response:', {
         status: error.response.status,
         data: error.response.data,
-        headers: error.response.headers,
         url: error.config.url
       });
+      
+      // Handle token expiration (status 401)
+      if (error.response.status === 401) {
+        // Clear token on authentication failure
+        // You might want to add token refresh logic here
+        localStorage.removeItem('authToken');
+      }
     } else if (error.request) {
-      // The request was made but no response was received
       console.error('API No Response:', error.request);
     } else {
-      // Something happened in setting up the request
       console.error('API Request Error:', error.message);
     }
-    return Promise.reject(error);
+    
+    // Process the error using our utility
+    const processedError = handleApiError(error);
+    return Promise.reject(processedError);
   }
 );
 

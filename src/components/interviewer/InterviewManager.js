@@ -1,592 +1,543 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
+  Container, 
   Box, 
   Typography, 
   Button, 
-  Card, 
-  CardContent, 
-  Grid, 
-  TextField,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Tabs,
+  Paper, 
+  Tabs, 
   Tab,
+  Alert,
+  Snackbar,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Paper,
-  Chip,
-  Tooltip,
-  MenuItem,
-  Menu,
+  CircularProgress,
+  useTheme,
+  TextField,
+  Grid,
+  alpha
 } from '@mui/material';
 import { 
-  Add as AddIcon, 
+  ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
+  Save as SaveIcon,
+  QuestionAnswer as QuestionsIcon,
+  Link as TokensIcon,
+  Refresh as RefreshIcon,
   Delete as DeleteIcon,
-  ContentCopy as CopyIcon,
-  MoreVert as MoreIcon,
-  QuestionAnswer as QuestionIcon,
-  Person as PersonIcon,
-  Link as LinkIcon,
-  ViewList as ViewListIcon,
+  Assessment as ResultsIcon,
+  ArrowForward as ArrowRight
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import InterviewDataProvider from './shared/InterviewDataProvider';
+import { interviewerAPI } from '../../api';
 
-// This component would be used to manage interviews and their questions
+/**
+ * InterviewManager Component - Single interview management interface
+ * 
+ * Features:
+ * - View and edit interview details
+ * - Navigation to questions, tokens, and results
+ * - Delete interview
+ */
 const InterviewManager = () => {
   const { interviewId } = useParams();
-  const navigate = useNavigate();
-  const [interviews, setInterviews] = useState([
-    { 
-      id: 1, 
-      name: 'Frontend Developer', 
-      description: 'Interview for senior frontend developer position',
-      questions: [
-        { id: 1, text: 'What is your experience with React?', preparationTime: 30, recordingTime: 120 },
-        { id: 2, text: 'Explain CSS flexbox and grid', preparationTime: 30, recordingTime: 120 },
-        { id: 3, text: 'How would you optimize a web application?', preparationTime: 30, recordingTime: 120 },
-      ],
-      candidates: 5,
-      completed: 2,
-      createdAt: '2025-04-01'
-    },
-    { 
-      id: 2, 
-      name: 'UX Designer', 
-      description: 'Interview for mid-level UX designer position',
-      questions: [
-        { id: 4, text: 'Describe your design process', preparationTime: 30, recordingTime: 120 },
-        { id: 5, text: 'How do you handle user feedback?', preparationTime: 30, recordingTime: 120 },
-      ],
-      candidates: 8,
-      completed: 4,
-      createdAt: '2025-04-10'
-    },
-    { 
-      id: 3, 
-      name: 'Product Manager', 
-      description: 'Interview for senior product manager position',
-      questions: [
-        { id: 6, text: 'How do you prioritize features?', preparationTime: 30, recordingTime: 120 },
-        { id: 7, text: 'Describe a product you launched', preparationTime: 30, recordingTime: 120 },
-        { id: 8, text: 'How do you work with engineers?', preparationTime: 30, recordingTime: 120 },
-      ],
-      candidates: 3,
-      completed: 1,
-      createdAt: '2025-04-15'
-    }
-  ]);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   
-  const [selectedInterview, setSelectedInterview] = useState(null);
-  const [isCreatingInterview, setIsCreatingInterview] = useState(false);
-  const [newInterview, setNewInterview] = useState({ name: '', description: '', questions: [] });
-  const [activeTab, setActiveTab] = useState(0);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [currentInterviewMenuId, setCurrentInterviewMenuId] = useState(null);
-  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-  const [newQuestion, setNewQuestion] = useState({ text: '', preparationTime: 30, recordingTime: 120 });
+  const navigate = useNavigate();
+  const theme = useTheme();
 
-  useEffect(() => {
-    if (interviewId) {
-      const interview = interviews.find(i => i.id === parseInt(interviewId));
-      if (interview) {
-        setSelectedInterview(interview);
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  const handleEditToggle = (interview) => {
+    if (isEditing) {
+      // Cancel edit
+      setIsEditing(false);
+    } else {
+      // Start edit
+      setEditedTitle(interview?.title || '');
+      setIsEditing(true);
+    }
+  };
+
+  const handleNavigateToQuestions = () => {
+    navigate(`/interviewer/interviews/${interviewId}/questions`);
+  };
+
+  const handleNavigateToTokens = () => {
+    navigate(`/interviewer/interviews/${interviewId}/tokens`);
+  };
+
+  const handleNavigateToResults = () => {
+    navigate(`/interviewer/interviews/${interviewId}/results`);
+  };
+
+  const handleBackToList = () => {
+    navigate('/interviewer/interviews');
+  };
+
+  const handleSaveChanges = async (interview, updateInterview) => {
+    if (!editedTitle.trim()) {
+      setSnackbar({
+        open: true,
+        message: 'Interview title cannot be empty',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await updateInterview(interviewId, { title: editedTitle });
+      
+      if (response) {
+        setSnackbar({
+          open: true,
+          message: 'Interview updated successfully',
+          severity: 'success'
+        });
+        setIsEditing(false);
       }
-    }
-  }, [interviewId, interviews]);
-
-  const handleMenuOpen = (event, interviewId) => {
-    setAnchorEl(event.currentTarget);
-    setCurrentInterviewMenuId(interviewId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setCurrentInterviewMenuId(null);
-  };
-
-  const handleCreateInterview = () => {
-    setIsCreatingInterview(true);
-  };
-
-  const handleSaveInterview = () => {
-    if (!newInterview.name.trim()) return;
-    
-    const newId = Math.max(...interviews.map(i => i.id), 0) + 1;
-    
-    setInterviews([...interviews, {
-      id: newId,
-      ...newInterview,
-      candidates: 0,
-      completed: 0,
-      createdAt: new Date().toISOString().split('T')[0]
-    }]);
-    
-    setNewInterview({ name: '', description: '', questions: [] });
-    setIsCreatingInterview(false);
-    navigate(`/interviewer/interviews/${newId}`);
-  };
-
-  const handleAddQuestion = () => {
-    setIsAddingQuestion(true);
-  };
-
-  const handleSaveQuestion = () => {
-    if (!newQuestion.text.trim() || !selectedInterview) return;
-    
-    const newId = Math.max(...selectedInterview.questions.map(q => q.id), 0) + 1;
-    const updatedQuestions = [
-      ...selectedInterview.questions, 
-      { ...newQuestion, id: newId }
-    ];
-    
-    // Update interview with new question
-    const updatedInterviews = interviews.map(interview => 
-      interview.id === selectedInterview.id 
-        ? { ...interview, questions: updatedQuestions }
-        : interview
-    );
-    
-    setInterviews(updatedInterviews);
-    setSelectedInterview({ ...selectedInterview, questions: updatedQuestions });
-    setNewQuestion({ text: '', preparationTime: 30, recordingTime: 120 });
-    setIsAddingQuestion(false);
-  };
-
-  const handleDeleteQuestion = (questionId) => {
-    if (!selectedInterview) return;
-    
-    const updatedQuestions = selectedInterview.questions.filter(q => q.id !== questionId);
-    
-    // Update interview with filtered questions
-    const updatedInterviews = interviews.map(interview => 
-      interview.id === selectedInterview.id 
-        ? { ...interview, questions: updatedQuestions }
-        : interview
-    );
-    
-    setInterviews(updatedInterviews);
-    setSelectedInterview({ ...selectedInterview, questions: updatedQuestions });
-  };
-
-  const handleDeleteInterview = (id) => {
-    setInterviews(interviews.filter(interview => interview.id !== id));
-    handleMenuClose();
-    
-    if (selectedInterview && selectedInterview.id === id) {
-      setSelectedInterview(null);
-      navigate('/interviewer/interviews');
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to update interview',
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCopyInterview = (id) => {
-    const interviewToCopy = interviews.find(interview => interview.id === id);
-    if (!interviewToCopy) return;
+  const handleDeleteInterview = async (interview, deleteInterview) => {
+    if (!window.confirm('Are you sure you want to delete this interview? This action cannot be undone.')) {
+      return;
+    }
 
-    const newId = Math.max(...interviews.map(i => i.id), 0) + 1;
-    const copiedInterview = {
-      ...interviewToCopy,
-      id: newId,
-      name: `${interviewToCopy.name} (Copy)`,
-      candidates: 0,
-      completed: 0,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setInterviews([...interviews, copiedInterview]);
-    handleMenuClose();
-    navigate(`/interviewer/interviews/${newId}`);
+    try {
+      const success = await deleteInterview(interviewId);
+      
+      if (success) {
+        setSnackbar({
+          open: true,
+          message: 'Interview deleted successfully',
+          severity: 'success'
+        });
+        
+        // Navigate back to the interview list after a brief delay
+        setTimeout(() => {
+          navigate('/interviewer/interviews');
+        }, 1500);
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete interview',
+        severity: 'error'
+      });
+    }
   };
 
-  const handleChangeTab = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
-  const renderInterviewsList = () => {
-    return (
-      <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" sx={{ 
-            fontWeight: 700,
-            fontSize: '1.25rem',
-            letterSpacing: '0.01em',
-            color: 'text.primary'
-          }}>
-            Interview Templates
-          </Typography>
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />}
-            onClick={handleCreateInterview}
-          >
-            Create Template
-          </Button>
-        </Box>
-
-        <Grid container spacing={3}>
-          {interviews.map(interview => (
-            <Grid item xs={12} md={6} lg={4} key={interview.id}>
-              <Card 
-                elevation={0}
-                sx={{ 
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 2,
-                  },
-                  position: 'relative'
-                }}
-              >
-                <CardContent sx={{ pb: 3 }} onClick={() => navigate(`/interviewer/interviews/${interview.id}`)}>
-                  <Typography variant="h6" sx={{ mb: 1 }}>
-                    {interview.name}
-                  </Typography>
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ height: 40, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {interview.description || 'No description provided'}
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
-                    <QuestionIcon sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {interview.questions.length} questions
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <PersonIcon sx={{ fontSize: '0.875rem', color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {interview.candidates} candidates
-                      </Typography>
-                    </Box>
-
-                    <Typography variant="body2" color="text.secondary">
-                      Created: {interview.createdAt}
-                    </Typography>
-                  </Box>
-                </CardContent>
-                
-                <IconButton 
-                  size="small" 
-                  sx={{ position: 'absolute', top: 8, right: 8 }}
-                  onClick={(e) => handleMenuOpen(e, interview.id)}
-                >
-                  <MoreIcon />
-                </IconButton>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={() => {
-            handleMenuClose();
-            navigate(`/interviewer/interviews/${currentInterviewMenuId}`);
-          }}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => handleCopyInterview(currentInterviewMenuId)}>
-            <ListItemIcon>
-              <CopyIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Duplicate</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => handleDeleteInterview(currentInterviewMenuId)}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText sx={{ color: 'error.main' }}>Delete</ListItemText>
-          </MenuItem>
-        </Menu>
-
-        {/* Create Interview Dialog */}
-        <Dialog open={isCreatingInterview} onClose={() => setIsCreatingInterview(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Create New Interview Template</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Interview Name"
-              fullWidth
-              variant="outlined"
-              value={newInterview.name}
-              onChange={(e) => setNewInterview({ ...newInterview, name: e.target.value })}
-              sx={{ mb: 2, mt: 1 }}
-            />
-            <TextField
-              margin="dense"
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              variant="outlined"
-              value={newInterview.description}
-              onChange={(e) => setNewInterview({ ...newInterview, description: e.target.value })}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setIsCreatingInterview(false)}>Cancel</Button>
-            <Button onClick={handleSaveInterview} variant="contained" disabled={!newInterview.name.trim()}>
-              Create
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    );
-  };
-
-  const renderInterviewDetail = () => {
-    if (!selectedInterview) return null;
-
-    return (
-      <Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box>
-            <Typography variant="h5" sx={{ 
-              fontWeight: 700,
-              fontSize: '1.25rem',
-              letterSpacing: '0.01em',
-              color: 'text.primary'
-            }}>
-              {selectedInterview.name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {selectedInterview.description || 'No description provided'}
-            </Typography>
-          </Box>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/interviewer/interviews')}
-          >
-            Back to All Interviews
-          </Button>
-        </Box>
-
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={activeTab} onChange={handleChangeTab} aria-label="interview details tabs">
-            <Tab label="Questions" icon={<QuestionIcon />} iconPosition="start" />
-            <Tab label="Candidates" icon={<PersonIcon />} iconPosition="start" />
-            <Tab label="Access Links" icon={<LinkIcon />} iconPosition="start" />
-            <Tab label="Results" icon={<ViewListIcon />} iconPosition="start" />
-          </Tabs>
-        </Box>
-
-        {activeTab === 0 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Question List</Typography>
-              <Button 
-                variant="contained" 
-                startIcon={<AddIcon />}
-                onClick={handleAddQuestion}
-                size="small"
-              >
-                Add Question
-              </Button>
-            </Box>
-
-            <Paper 
-              elevation={0}
-              sx={{ 
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-              }}
-            >
-              {selectedInterview.questions.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
-                    No questions added yet. Click "Add Question" to create your first question.
-                  </Typography>
-                </Box>
-              ) : (
-                <List>
-                  {selectedInterview.questions.map((question, index) => (
-                    <React.Fragment key={question.id}>
-                      {index > 0 && <Divider />}
-                      <ListItem 
-                        secondaryAction={
-                          <IconButton edge="end" onClick={() => handleDeleteQuestion(question.id)}>
-                            <DeleteIcon color="error" />
-                          </IconButton>
-                        }
-                      >
-                        <ListItemText
-                          primary={
-                            <Typography sx={{ fontWeight: 500 }}>
-                              {`Q${index + 1}: ${question.text}`}
-                            </Typography>
-                          }
-                          secondary={
-                            <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                              <Chip 
-                                size="small" 
-                                label={`Prep: ${question.preparationTime}s`} 
-                                variant="outlined"
-                              />
-                              <Chip 
-                                size="small" 
-                                label={`Record: ${question.recordingTime}s`} 
-                                variant="outlined"
-                              />
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
-            </Paper>
-            
-            {/* Add Question Dialog */}
-            <Dialog open={isAddingQuestion} onClose={() => setIsAddingQuestion(false)} maxWidth="sm" fullWidth>
-              <DialogTitle>Add New Question</DialogTitle>
-              <DialogContent>
-                <TextField
-                  autoFocus
-                  margin="dense"
-                  label="Question Text"
-                  fullWidth
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  value={newQuestion.text}
-                  onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
-                  sx={{ mb: 2, mt: 1 }}
-                />
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <TextField
-                      type="number"
-                      margin="dense"
-                      label="Preparation Time (seconds)"
-                      fullWidth
-                      variant="outlined"
-                      value={newQuestion.preparationTime}
-                      onChange={(e) => setNewQuestion({ 
-                        ...newQuestion, 
-                        preparationTime: parseInt(e.target.value) || 0 
-                      })}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      type="number"
-                      margin="dense"
-                      label="Recording Time (seconds)"
-                      fullWidth
-                      variant="outlined"
-                      value={newQuestion.recordingTime}
-                      onChange={(e) => setNewQuestion({ 
-                        ...newQuestion, 
-                        recordingTime: parseInt(e.target.value) || 0 
-                      })}
-                    />
-                  </Grid>
-                </Grid>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setIsAddingQuestion(false)}>Cancel</Button>
-                <Button onClick={handleSaveQuestion} variant="contained" disabled={!newQuestion.text.trim()}>
-                  Add Question
-                </Button>
-              </DialogActions>
-            </Dialog>
-          </Box>
-        )}
-
-        {activeTab === 1 && (
-          <Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>Candidates</Typography>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                p: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-                textAlign: 'center'
-              }}
-            >
-              <Typography color="text.secondary">
-                {selectedInterview.candidates > 0 
-                  ? `${selectedInterview.candidates} candidates assigned to this interview`
-                  : 'No candidates assigned to this interview yet'
-                }
-              </Typography>
-            </Paper>
-          </Box>
-        )}
-
-        {activeTab === 2 && (
-          <Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>Access Links</Typography>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                p: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-                textAlign: 'center' 
-              }}
-            >
-              <Typography color="text.secondary">
-                Access tokens management will be displayed here
-              </Typography>
-            </Paper>
-          </Box>
-        )}
-
-        {activeTab === 3 && (
-          <Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>Results</Typography>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                p: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-                textAlign: 'center'
-              }}
-            >
-              <Typography color="text.secondary">
-                {selectedInterview.completed > 0 
-                  ? `${selectedInterview.completed} completed interviews`
-                  : 'No completed interviews yet'
-                }
-              </Typography>
-            </Paper>
-          </Box>
-        )}
-      </Box>
-    );
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      {selectedInterview ? renderInterviewDetail() : renderInterviewsList()}
-    </Box>
+    <InterviewDataProvider interviewId={interviewId}>
+      {({ 
+        interview, 
+        loading, 
+        error, 
+        refreshData,
+        updateInterview,
+        deleteInterview
+      }) => (
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 4 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={handleBackToList}
+                sx={{ mr: 2, borderRadius: 2 }}
+              >
+                Back to List
+              </Button>
+              {!isEditing ? (
+                <Typography 
+                  variant="h4" 
+                  component="h1" 
+                  fontWeight={600} 
+                  sx={{ 
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}
+                >
+                  {loading ? 'Loading...' : interview?.title || 'Interview Details'}
+                </Typography>
+              ) : (
+                <Box component="form" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    variant="outlined"
+                    size="medium"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    label="Interview Title"
+                    fullWidth
+                    sx={{ 
+                      minWidth: 300,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2
+                      }
+                    }}
+                    autoFocus
+                  />
+                </Box>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={refreshData}
+                disabled={loading}
+                sx={{ borderRadius: 2 }}
+              >
+                Refresh
+              </Button>
+              
+              {!isEditing ? (
+                <Button
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => handleEditToggle(interview)}
+                  disabled={loading}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Edit
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleEditToggle(interview)}
+                    disabled={saving}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                    onClick={() => handleSaveChanges(interview, updateInterview)}
+                    disabled={saving}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </>
+              )}
+            </Box>
+          </Box>
+
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 3, 
+                borderRadius: 2,
+                boxShadow: 1
+              }}
+              action={
+                <Button color="inherit" size="small" onClick={refreshData}>
+                  Retry
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+
+          {loading ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              py: 8 
+            }}>
+              <CircularProgress />
+            </Box>
+          ) : interview ? (
+            <>
+              <Paper 
+                sx={{ 
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  boxShadow: theme.shadows[2],
+                  mb: 4
+                }}
+              >
+                <Box sx={{ p: 2, bgcolor: 'background.subtle' }}>
+                  <Tabs 
+                    value={currentTab} 
+                    onChange={handleTabChange}
+                    sx={{
+                      '& .MuiTab-root': {
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        fontSize: '0.95rem',
+                      }
+                    }}
+                  >
+                    <Tab label="Overview" />
+                    <Tab label="Details" />
+                    <Tab label="Configuration" />
+                  </Tabs>
+                </Box>
+                
+                <Divider />
+                
+                <Box sx={{ p: 3 }}>
+                  {currentTab === 0 && (
+                    <Box>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        gap: 3,
+                        mb: 4 
+                      }}>
+                        <Button
+                          variant="contained"
+                          startIcon={<QuestionsIcon />}
+                          onClick={handleNavigateToQuestions}
+                          color="primary"
+                          sx={{ 
+                            py: 2,
+                            px: 4,
+                            borderRadius: 2,
+                            flexGrow: 1,
+                            boxShadow: 2
+                          }}
+                        >
+                          Manage Questions
+                        </Button>
+                        
+                        <Button
+                          variant="contained"
+                          startIcon={<TokensIcon />}
+                          onClick={handleNavigateToTokens}
+                          color="secondary"
+                          sx={{ 
+                            py: 2,
+                            px: 4,
+                            borderRadius: 2,
+                            flexGrow: 1,
+                            boxShadow: 2
+                          }}
+                        >
+                          Access Tokens
+                        </Button>
+                        
+                        <Button
+                          variant="contained"
+                          startIcon={<ResultsIcon />}
+                          onClick={handleNavigateToResults}
+                          color="info"
+                          sx={{ 
+                            py: 2,
+                            px: 4,
+                            borderRadius: 2,
+                            flexGrow: 1,
+                            boxShadow: 2
+                          }}
+                        >
+                          View Results
+                        </Button>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          Interview Summary
+                        </Typography>
+                      </Box>
+
+                      <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={12} md={6}>
+                          <Paper
+                            elevation={0}
+                            sx={{ 
+                              p: 3, 
+                              borderRadius: 2,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              height: '100%'
+                            }}
+                          >
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Interview Details
+                            </Typography>
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Created On
+                              </Typography>
+                              <Typography variant="body1">
+                                {new Date(interview.created_at).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Questions
+                              </Typography>
+                              <Typography variant="body1">
+                                {interview.questions?.length || 0} questions
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography variant="body2" color="text.secondary">
+                                Active Tokens
+                              </Typography>
+                              <Typography variant="body1">
+                                {interview.active_tokens_count || 0} of {interview.tokens_count || 0}
+                              </Typography>
+                            </Box>
+                          </Paper>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Paper
+                            elevation={0}
+                            sx={{ 
+                              p: 3, 
+                              borderRadius: 2,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              height: '100%'
+                            }}
+                          >
+                            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                              Results Overview
+                            </Typography>
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Completed Sessions
+                              </Typography>
+                              <Typography variant="body1">
+                                {interview.completed_sessions_count || 0}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Total Responses
+                              </Typography>
+                              <Typography variant="body1">
+                                {interview.total_responses_count || 0}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                              <Button 
+                                size="small"
+                                variant="text"
+                                endIcon={<ArrowRight />}
+                                onClick={handleNavigateToResults}
+                              >
+                                View All Results
+                              </Button>
+                            </Box>
+                          </Paper>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                  
+                  {currentTab === 1 && (
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                        Interview Settings
+                      </Typography>
+                      {/* Interview details content */}
+                    </Box>
+                  )}
+                  
+                  {currentTab === 2 && (
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                        Advanced Configuration
+                      </Typography>
+                      {/* Configuration content */}
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+              
+              <Paper
+                sx={{ 
+                  p: 3, 
+                  borderRadius: 3,
+                  boxShadow: theme.shadows[2],
+                  backgroundColor: alpha(theme.palette.error.light, 0.05),
+                  border: '1px solid',
+                  borderColor: alpha(theme.palette.error.main, 0.2),
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="h6" color="error.main" sx={{ fontWeight: 600 }}>
+                      Danger Zone
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Deleting an interview will remove all associated questions, tokens, and results.
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => handleDeleteInterview(interview, deleteInterview)}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    Delete Interview
+                  </Button>
+                </Box>
+              </Paper>
+            </>
+          ) : (
+            <Alert severity="warning">Interview not found or was deleted.</Alert>
+          )}
+          
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={6000}
+            onClose={handleCloseSnackbar}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          >
+            <Alert 
+              onClose={handleCloseSnackbar} 
+              severity={snackbar.severity} 
+              elevation={6}
+              variant="filled"
+              sx={{ borderRadius: 2 }}
+            >
+              {snackbar.message}
+            </Alert>
+          </Snackbar>
+        </Container>
+      )}
+    </InterviewDataProvider>
   );
 };
 

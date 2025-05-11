@@ -9,92 +9,111 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Container, Typography, Box, Paper, Button, TextField, 
-  Card, CardContent, IconButton, Dialog, DialogTitle,
-  DialogContent, DialogActions, Grid, FormControl,
-  InputLabel, Select, MenuItem, Chip, Divider,
-  List, ListItem, ListItemText, ListItemSecondaryAction,
-  Tab, Tabs
+  Container,
+  Typography,
+  Box,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardContent,
+  Grid,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Divider,
+  Chip,
+  Tooltip,
+  Paper,
+  FormHelperText,
+  InputAdornment,
+  OutlinedInput,
+  Tab,
+  Tabs,
+  CircularProgress
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  Add as AddIcon,
+  FilterList as FilterIcon,
+  AccessTime as AccessTimeIcon,
+  Videocam as VideocamIcon,
   Category as CategoryIcon,
-  CloudUpload as UploadIcon
+  Search as SearchIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
-import { InterviewService } from '../../services';
+
+// Mock questions for development
+const mockQuestions = [
+  { 
+    id: 1, 
+    text: "Tell me about yourself", 
+    preparation_time: 30, 
+    responding_time: 60, 
+    category: "Behavioral" 
+  },
+  { 
+    id: 2, 
+    text: "What are your strengths and weaknesses?", 
+    preparation_time: 30, 
+    responding_time: 60, 
+    category: "Behavioral" 
+  },
+  { 
+    id: 3, 
+    text: "Explain the difference between var, let, and const in JavaScript", 
+    preparation_time: 45, 
+    responding_time: 90, 
+    category: "Technical" 
+  },
+  { 
+    id: 4, 
+    text: "How would you implement a linked list in Python?", 
+    preparation_time: 60, 
+    responding_time: 120, 
+    category: "Technical" 
+  },
+  { 
+    id: 5, 
+    text: "Describe a challenging problem you solved", 
+    preparation_time: 45, 
+    responding_time: 120, 
+    category: "Behavioral" 
+  }
+];
+
+// Categories for filter
+const categories = ["All", "Behavioral", "Technical", "Leadership", "Problem Solving"];
 
 const ManageQuestions = () => {
   const [questions, setQuestions] = useState([]);
+  const [filteredQuestions, setFilteredQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState({
     id: null,
     text: '',
     preparation_time: 30,
     responding_time: 60,
-    category: ''
+    category: 'Behavioral'
   });
-  const [newCategory, setNewCategory] = useState('');
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  
-  // Fetch questions and categories on component mount
+  const [activeTab, setActiveTab] = useState(0);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        // These would be actual API calls in production
-        
-        // Mock data for development
-        const mockCategories = [
-          'Technical Skills', 
-          'Behavioral', 
-          'Problem Solving',
-          'System Design'
-        ];
-        
-        const mockQuestions = [
-          {
-            id: 1,
-            text: "Tell me about yourself and your experience",
-            preparation_time: 30,
-            responding_time: 120,
-            category: "Behavioral"
-          },
-          {
-            id: 2,
-            text: "What's the difference between var, let and const in JavaScript?",
-            preparation_time: 30,
-            responding_time: 60,
-            category: "Technical Skills"
-          },
-          {
-            id: 3,
-            text: "How would you design a URL shortening service?",
-            preparation_time: 60,
-            responding_time: 180,
-            category: "System Design"
-          },
-          {
-            id: 4,
-            text: "Write an algorithm to find the longest substring without repeating characters",
-            preparation_time: 60,
-            responding_time: 120,
-            category: "Problem Solving"
-          },
-          {
-            id: 5,
-            text: "Describe a challenging project you worked on and how you overcame obstacles",
-            preparation_time: 45,
-            responding_time: 180,
-            category: "Behavioral"
-          }
-        ];
-        
-        setCategories(mockCategories);
         setQuestions(mockQuestions);
       } catch (error) {
         console.error('Failed to fetch questions:', error);
@@ -106,10 +125,25 @@ const ManageQuestions = () => {
     fetchData();
   }, []);
 
-  // Filter questions based on selected category
-  const filteredQuestions = selectedCategory === 'all' 
-    ? questions 
-    : questions.filter(q => q.category === selectedCategory);
+  // Filter questions based on selected category and search term
+  useEffect(() => {
+    let filtered = questions;
+    
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(q => q.category.toLowerCase() === selectedCategory.toLowerCase());
+    }
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(q => 
+        q.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setFilteredQuestions(filtered);
+  }, [selectedCategory, questions, searchTerm]);
 
   const handleOpenDialog = (question = null) => {
     if (question) {
@@ -120,7 +154,7 @@ const ManageQuestions = () => {
         text: '',
         preparation_time: 30,
         responding_time: 60,
-        category: categories.length > 0 ? categories[0] : ''
+        category: categories.length > 1 ? categories[1] : 'Behavioral'
       });
     }
     setDialogOpen(true);
@@ -141,275 +175,474 @@ const ManageQuestions = () => {
   };
 
   const handleSaveQuestion = () => {
-    // Validation
-    if (!currentQuestion.text.trim()) {
-      alert('Question text cannot be empty');
-      return;
-    }
-
-    // Add new question or update existing
-    if (currentQuestion.id === null) {
+    if (currentQuestion.text.trim() === '') return;
+    
+    const isUpdate = currentQuestion.id !== null;
+    
+    if (isUpdate) {
+      // Update existing question
+      const updatedQuestions = questions.map(q => 
+        q.id === currentQuestion.id ? currentQuestion : q
+      );
+      setQuestions(updatedQuestions);
+    } else {
       // Add new question
       const newQuestion = {
         ...currentQuestion,
         id: questions.length > 0 ? Math.max(...questions.map(q => q.id)) + 1 : 1
       };
       setQuestions([...questions, newQuestion]);
-    } else {
-      // Update existing question
-      setQuestions(questions.map(q => 
-        q.id === currentQuestion.id ? currentQuestion : q
-      ));
     }
-
+    
     handleCloseDialog();
   };
 
   const handleDeleteQuestion = (id) => {
-    if (window.confirm('Are you sure you want to delete this question?')) {
-      setQuestions(questions.filter(q => q.id !== id));
-    }
-  };
-
-  const handleOpenCategoryDialog = () => {
-    setNewCategory('');
-    setCategoryDialogOpen(true);
-  };
-
-  const handleCloseCategoryDialog = () => {
-    setCategoryDialogOpen(false);
-  };
-
-  const handleAddCategory = () => {
-    if (!newCategory.trim()) {
-      alert('Category name cannot be empty');
-      return;
-    }
-
-    if (categories.includes(newCategory)) {
-      alert('This category already exists');
-      return;
-    }
-
-    setCategories([...categories, newCategory]);
-    setCategoryDialogOpen(false);
+    setQuestions(questions.filter(q => q.id !== id));
   };
 
   const handleCategoryChange = (event) => {
     setSelectedCategory(event.target.value);
   };
 
-  return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight={600}>
-          Question Bank
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<CategoryIcon />}
-            onClick={handleOpenCategoryDialog}
-          >
-            Add Category
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add Question
-          </Button>
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const renderAllQuestionsTab = () => (
+    <Box>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 3 
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+          <TextField
+            placeholder="Search questions..."
+            size="small"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            sx={{ flexGrow: 1, maxWidth: 400 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel id="category-filter-label">Category</InputLabel>
+            <Select
+              labelId="category-filter-label"
+              value={selectedCategory}
+              label="Category"
+              onChange={handleCategoryChange}
+              startAdornment={
+                <InputAdornment position="start">
+                  <FilterIcon fontSize="small" />
+                </InputAdornment>
+              }
+            >
+              <MenuItem value="all">All Categories</MenuItem>
+              {categories.slice(1).map((category) => (
+                <MenuItem key={category} value={category.toLowerCase()}>
+                  {category}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>Filter by category</FormHelperText>
+          </FormControl>
         </Box>
+
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpenDialog()}
+          sx={{ ml: 2 }}
+        >
+          Add Question
+        </Button>
       </Box>
 
-      <Card sx={{ mb: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={selectedCategory}
-            onChange={(e, newValue) => setSelectedCategory(newValue)}
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab label="All Questions" value="all" />
-            {categories.map((category) => (
-              <Tab key={category} label={category} value={category} />
-            ))}
-          </Tabs>
-        </Box>
-      </Card>
-
-      {/* Question List */}
       {loading ? (
-        <Typography>Loading questions...</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
       ) : filteredQuestions.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            No questions found in this category
+        <Paper
+          elevation={0}
+          sx={{
+            p: 6,
+            textAlign: 'center',
+            borderRadius: 2,
+            border: '1px dashed',
+            borderColor: 'divider',
+            bgcolor: 'background.default'
+          }}
+        >
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: 500 }}>
+            No Questions Found
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: '600px', mx: 'auto' }}>
+            {searchTerm || selectedCategory !== 'all' 
+              ? "No questions match your current filter criteria. Try adjusting your search or category filter."
+              : "You haven't added any questions yet. Click 'Add Question' to create your first question."}
           </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
+            sx={{ mt: 1 }}
           >
-            Add Your First Question
+            Add Question
           </Button>
         </Paper>
       ) : (
-        <Grid container spacing={3}>
-          {filteredQuestions.map((question) => (
-            <Grid item xs={12} key={question.id}>
-              <Paper elevation={2} sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      {question.text}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <Chip 
-                        size="small" 
-                        label={`Prep: ${question.preparation_time}s`} 
-                        color="primary" 
-                        variant="outlined"
-                      />
-                      <Chip 
-                        size="small" 
-                        label={`Answer: ${question.responding_time}s`} 
-                        color="secondary" 
-                        variant="outlined"
-                      />
-                      <Chip 
-                        size="small" 
-                        label={question.category} 
-                      />
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            overflow: 'hidden'
+          }}
+        >
+          <List disablePadding>
+            {filteredQuestions.map((question, index) => (
+              <React.Fragment key={question.id}>
+                {index > 0 && <Divider />}
+                <ListItem
+                  sx={{
+                    py: 2,
+                    px: 3,
+                    '&:hover': {
+                      bgcolor: 'background.default',
+                    }
+                  }}
+                >
+                  <ListItemText
+                    primary={
+                      <Typography sx={{ fontWeight: 500, pr: 8 }}>
+                        {question.text}
+                      </Typography>
+                    }
+                    secondary={
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        <Chip 
+                          size="small" 
+                          label={question.category}
+                          icon={<CategoryIcon fontSize="small" />} 
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Chip 
+                          size="small" 
+                          label={`Prep: ${question.preparation_time}s`} 
+                          icon={<AccessTimeIcon fontSize="small" />} 
+                          variant="outlined"
+                        />
+                        <Chip 
+                          size="small" 
+                          label={`Response: ${question.responding_time}s`} 
+                          icon={<VideocamIcon fontSize="small" />} 
+                          variant="outlined"
+                        />
+                      </Box>
+                    }
+                    primaryTypographyProps={{ component: 'div' }}
+                    secondaryTypographyProps={{ component: 'div' }}
+                  />
+                  <ListItemSecondaryAction>
+                    <Box sx={{ display: 'flex' }}>
+                      <Tooltip title="Edit Question">
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleOpenDialog(question)}
+                          size="small"
+                          sx={{ mr: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Question">
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleDeleteQuestion(question.id)}
+                          size="small"
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
-                  </Box>
-                  <Box>
-                    <IconButton 
-                      color="primary"
-                      onClick={() => handleOpenDialog(question)}
-                      size="small"
-                      sx={{ mr: 1 }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      color="error"
-                      onClick={() => handleDeleteQuestion(question.id)}
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              </React.Fragment>
+            ))}
+          </List>
+        </Paper>
       )}
+    </Box>
+  );
+
+  const renderCategoriesTab = () => (
+    <Box sx={{ mt: 2 }}>
+      <Grid container spacing={3}>
+        {categories.slice(1).map((category) => {
+          const categoryQuestions = questions.filter(q => 
+            q.category.toLowerCase() === category.toLowerCase()
+          );
+          
+          return (
+            <Grid item xs={12} sm={6} md={4} key={category}>
+              <Card
+                elevation={0}
+                sx={{
+                  height: '100%',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                }}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {category}
+                    </Typography>
+                    <Chip 
+                      size="small" 
+                      label={`${categoryQuestions.length} Questions`}
+                      color="primary"
+                    />
+                  </Box>
+                  
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  {categoryQuestions.length > 0 ? (
+                    <List dense sx={{ 
+                      maxHeight: 220, 
+                      overflow: 'auto',
+                      '& .MuiListItem-root': {
+                        px: 0,
+                        py: 0.75
+                      }
+                    }}>
+                      {categoryQuestions.slice(0, 5).map((question) => (
+                        <ListItem key={question.id}>
+                          <ListItemText 
+                            primary={question.text}
+                            primaryTypographyProps={{
+                              noWrap: true,
+                              title: question.text,
+                              sx: { fontSize: '0.875rem' }
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                      {categoryQuestions.length > 5 && (
+                        <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
+                          + {categoryQuestions.length - 5} more
+                        </Typography>
+                      )}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" align="center">
+                      No questions in this category
+                    </Typography>
+                  )}
+                  
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setSelectedCategory(category.toLowerCase());
+                        setActiveTab(0);
+                      }}
+                    >
+                      View All
+                    </Button>
+                    <Button
+                      size="small"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setCurrentQuestion({
+                          id: null,
+                          text: '',
+                          preparation_time: 30,
+                          responding_time: 60,
+                          category: category
+                        });
+                        setDialogOpen(true);
+                      }}
+                      sx={{ ml: 1 }}
+                    >
+                      Add
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Box>
+  );
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={0} sx={{ 
+        p: 3, 
+        mb: 3, 
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'divider' 
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start',
+          mb: 3 
+        }}>
+          <Box>
+            <Typography variant="h5" sx={{ 
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              letterSpacing: '0.01em',
+              color: 'text.primary'
+            }}>
+              Question Library
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Manage your interview questions. These can be added to any interview template.
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            sx={{ mb: 2 }}
+          >
+            <Tab label="All Questions" />
+            <Tab label="By Category" />
+          </Tabs>
+        </Box>
+
+        {activeTab === 0 ? renderAllQuestionsTab() : renderCategoriesTab()}
+      </Paper>
 
       {/* Question Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {currentQuestion.id ? "Edit Question" : "Add New Question"}
+      <Dialog 
+        open={dialogOpen} 
+        onClose={handleCloseDialog} 
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          {currentQuestion.id ? 'Edit Question' : 'Add New Question'}
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent sx={{ pt: 3 }}>
+          <TextField
+            autoFocus
+            margin="dense"
+            name="text"
+            label="Question Text"
+            fullWidth
+            variant="outlined"
+            value={currentQuestion.text}
+            onChange={handleInputChange}
+            multiline
+            rows={3}
+            sx={{ mb: 3 }}
+          />
+          
           <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Question Text"
-                name="text"
-                value={currentQuestion.text}
-                onChange={handleInputChange}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth margin="dense">
+                <InputLabel id="category-label">Category</InputLabel>
                 <Select
+                  labelId="category-label"
                   name="category"
                   value={currentQuestion.category}
                   onChange={handleInputChange}
                   label="Category"
                 >
-                  {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                      {category}
-                    </MenuItem>
+                  {categories.slice(1).map((cat) => (
+                    <MenuItem key={cat} value={cat}>{cat}</MenuItem>
                   ))}
                 </Select>
+                <FormHelperText>Type of interview question</FormHelperText>
               </FormControl>
             </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Preparation Time (seconds)"
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth variant="outlined" margin="dense">
+                <InputLabel htmlFor="preparation_time">Preparation Time (sec)</InputLabel>
+                <OutlinedInput
+                  id="preparation_time"
                   name="preparation_time"
+                  type="number"
                   value={currentQuestion.preparation_time}
                   onChange={handleInputChange}
-                  InputProps={{ inputProps: { min: 0 } }}
+                  label="Preparation Time (sec)"
+                  inputProps={{ min: 0, step: 10 }}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <AccessTimeIcon fontSize="small" />
+                    </InputAdornment>
+                  }
                 />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Response Time (seconds)"
+                <FormHelperText>
+                  Time for candidate preparation
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth variant="outlined" margin="dense">
+                <InputLabel htmlFor="responding_time">Response Time (sec)</InputLabel>
+                <OutlinedInput
+                  id="responding_time"
                   name="responding_time"
+                  type="number"
                   value={currentQuestion.responding_time}
                   onChange={handleInputChange}
-                  InputProps={{ inputProps: { min: 0 } }}
+                  label="Response Time (sec)"
+                  inputProps={{ min: 0, step: 10 }}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <VideocamIcon fontSize="small" />
+                    </InputAdornment>
+                  }
                 />
-              </Box>
+                <FormHelperText>
+                  Maximum answering time
+                </FormHelperText>
+              </FormControl>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseDialog} color="inherit" variant="outlined">
+            Cancel
+          </Button>
           <Button 
+            onClick={handleSaveQuestion} 
             variant="contained"
-            onClick={handleSaveQuestion}
+            startIcon={currentQuestion.id ? <SaveIcon /> : <AddIcon />}
             disabled={!currentQuestion.text.trim()}
           >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Category Dialog */}
-      <Dialog open={categoryDialogOpen} onClose={handleCloseCategoryDialog}>
-        <DialogTitle>Add New Category</DialogTitle>
-        <DialogContent dividers>
-          <TextField
-            fullWidth
-            label="Category Name"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Existing Categories:
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {categories.map((category) => (
-              <Chip key={category} label={category} />
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCategoryDialog}>Cancel</Button>
-          <Button 
-            variant="contained"
-            onClick={handleAddCategory}
-            disabled={!newCategory.trim() || categories.includes(newCategory)}
-          >
-            Add
+            {currentQuestion.id ? 'Save Changes' : 'Add Question'}
           </Button>
         </DialogActions>
       </Dialog>
