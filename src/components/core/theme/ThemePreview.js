@@ -20,13 +20,19 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ColorLensIcon from '@mui/icons-material/ColorLens';
+import { componentColors } from '../../../styles/theme';
+import { 
+  adjustColorLuminance, 
+  calculateLuminance, 
+  hexToRgb 
+} from '../../../utils/colorUtils';
 
 const ThemePreview = ({ 
   colors = {
-    primary: '#1976d2',
-    secondary: '#dc004e', 
-    background: '#f5f5f5',
-    text: '#333333'
+    primary: componentColors.buttonBackground,
+    secondary: componentColors.headerColor, 
+    background: componentColors.background,
+    text: componentColors.labelColor
   },
   themeOptions = null,
   logo = null
@@ -430,53 +436,40 @@ const ColorChip = ({ color, label, tooltip, variant }) => {
   return content;
 };
 
-// Helper function to check if a color is dark
+// Helper function to check if a color is dark - using imported utility
 const isDark = (color) => {
-  // Simple check for hex colors
+  if (!color) return false;
+  
+  // For hex colors, use the utility function
   if (color.startsWith('#')) {
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness < 128;
+    const rgb = hexToRgb(color);
+    if (rgb) {
+      const luminance = calculateLuminance(rgb);
+      return luminance < 0.5;
+    }
   }
+  
   // Handle rgba colors
   if (color.startsWith('rgba')) {
     const parts = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     if (parts) {
-      const r = parseInt(parts[1], 10);
-      const g = parseInt(parts[2], 10);
-      const b = parseInt(parts[3], 10);
-      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-      return brightness < 128;
+      const rgb = {
+        r: parseInt(parts[1], 10),
+        g: parseInt(parts[2], 10),
+        b: parseInt(parts[3], 10)
+      };
+      const luminance = calculateLuminance(rgb);
+      return luminance < 0.5;
     }
   }
+  
   return false;
 };
 
-// Helper function to lighten or darken a color
+// Helper function to lighten or darken a color - using imported utility
 const lightenOrDarken = (color, amount) => {
-  // Only process hex colors
-  if (!color.startsWith('#')) return color;
-  
-  let r = parseInt(color.slice(1, 3), 16);
-  let g = parseInt(color.slice(3, 5), 16);
-  let b = parseInt(color.slice(5, 7), 16);
-  
-  if (amount > 0) {
-    // Lighten
-    r = Math.min(255, Math.round(r + (255 - r) * amount));
-    g = Math.min(255, Math.round(g + (255 - g) * amount));
-    b = Math.min(255, Math.round(b + (255 - b) * amount));
-  } else {
-    // Darken
-    const darkenAmount = -amount;
-    r = Math.max(0, Math.round(r * (1 - darkenAmount)));
-    g = Math.max(0, Math.round(g * (1 - darkenAmount)));
-    b = Math.max(0, Math.round(b * (1 - darkenAmount)));
-  }
-  
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  if (!color) return color;
+  return adjustColorLuminance(color, amount);
 };
 
 export default ThemePreview;

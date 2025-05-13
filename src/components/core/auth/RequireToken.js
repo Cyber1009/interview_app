@@ -94,11 +94,10 @@ const RequireToken = ({ children }) => {
           <Typography variant="body1" paragraph>
             You need a valid access token to participate in this interview.
           </Typography>
-          
-          <Button 
+            <Button 
             variant="contained" 
             fullWidth
-            onClick={() => window.location.href = '/access'}
+            onClick={() => window.location.href = '/interview-access'}
           >
             Enter Access Token
           </Button>

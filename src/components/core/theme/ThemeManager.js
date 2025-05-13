@@ -39,14 +39,14 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import InfoIcon from '@mui/icons-material/Info';
 import ColorPicker from './ColorPicker';
 import ThemePreview from './ThemePreview';
+import { colors, componentColors } from '../../../styles/theme';
 
-const ThemeManager = ({ onThemeChange, logo, onLogoChange }) => {
-  const [themeData, setThemeData] = useState({
-    primaryColor: localStorage.getItem('primaryColor') || '#1976d2',
-    secondaryColor: localStorage.getItem('secondaryColor') || '#dc004e',
-    backgroundColor: localStorage.getItem('backgroundColor') || '#ffffff',
-    textColor: localStorage.getItem('textColor') || '#333333',
-    isDarkMode: localStorage.getItem('darkMode') === 'true'
+const ThemeManager = ({ onThemeChange, logo, onLogoChange }) => {  const [themeData, setThemeData] = useState({
+    primaryColor: localStorage.getItem('primaryColor') || colors.primary,
+    secondaryColor: localStorage.getItem('secondaryColor') || colors.gray,
+    backgroundColor: localStorage.getItem('backgroundColor') || colors.white,
+    textColor: localStorage.getItem('textColor') || colors.gray,
+    isDarkMode: false // Dark mode removed for simplicity
   });
   
   // Store advanced theme options separately

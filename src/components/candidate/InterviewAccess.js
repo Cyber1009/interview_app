@@ -21,6 +21,7 @@ import {
 import KeyIcon from '@mui/icons-material/VpnKey';
 import { candidatesAPI } from '../../api'; // Updated to use consolidated API
 import { ThemeService } from '../../services';
+import { getCardStyles, getInputStyles, getButtonStyles } from '../../utils/themeUtils';
 
 // Colors from sample.html for consistency
 const sampleColors = {
@@ -146,16 +147,10 @@ const InterviewAccess = () => {
       minHeight: '100vh',
       bgcolor: alpha(sampleColors.background, 0.5), // Using sample.html background color
       py: 8
-    }}>
-      <Container maxWidth="sm">
+    }}>      <Container maxWidth="sm">
         <Paper 
           elevation={2}
-          sx={{
-            p: 4,
-            borderRadius: 3,
-            bgcolor: sampleColors.cardBackground,
-            boxShadow: '0 4px 24px 0 rgba(80,86,96,0.10)' // Using shadow from sample
-          }}
+          sx={getCardStyles({ backgroundColor: sampleColors.cardBackground })}
         >
           <Box sx={{ 
             display: 'flex', 
@@ -204,8 +199,7 @@ const InterviewAccess = () => {
 
           {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <TextField
+          <Box component="form" onSubmit={handleSubmit}>            <TextField
               fullWidth
               label="Access Token"
               value={token}
@@ -214,48 +208,20 @@ const InterviewAccess = () => {
               variant="outlined"
               disabled={loading}
               placeholder="Enter your access token"
-              InputProps={{
-                sx: {
-                  bgcolor: alpha(sampleColors.labelBackground, 0.3),
-                  '&:hover': {
-                    bgcolor: alpha(sampleColors.labelBackground, 0.5),
-                  },
-                  '&.Mui-focused': {
-                    bgcolor: sampleColors.cardBackground,
-                  }
-                }
-              }}
-              sx={{ 
-                mb: 4,
-                '& .MuiInputLabel-root': { 
-                  color: sampleColors.labelColor 
-                },
-                '& .MuiOutlinedInput-root': {
-                  '&.Mui-focused fieldset': {
-                    borderColor: sampleColors.buttonBackground,
-                  }
-                }
-              }}
-            />
-
-            <Button
+              sx={getInputStyles({
+                labelColor: sampleColors.labelColor,
+                backgroundColor: sampleColors.labelBackground,
+                focusColor: sampleColors.buttonBackground
+              })}
+            />            <Button
               type="submit"
               variant="contained"
               fullWidth
               disabled={loading}
-              sx={{
-                py: 1.5,
-                borderRadius: 2,
-                fontSize: '1rem',
-                bgcolor: sampleColors.buttonBackground, // Using sample.html button color
-                color: sampleColors.buttonColor,
-                '&:hover': {
-                  bgcolor: alpha(sampleColors.buttonBackground, 0.85)
-                },
-                '&.Mui-disabled': {
-                  bgcolor: alpha(sampleColors.buttonBackground, 0.6)
-                }
-              }}
+              sx={getButtonStyles({
+                backgroundColor: sampleColors.buttonBackground,
+                textColor: sampleColors.buttonColor
+              })}
             >
               {loading ? (
                 <CircularProgress size={24} color="inherit" />

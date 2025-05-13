@@ -67,11 +67,18 @@ function App() {
   
   const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isAuthenticated());
   const [userRole, setUserRole] = useState(() => authService.getUserRole());
-  const [themeInitialized, setThemeInitialized] = useState(false);
-  // Create theme with light mode only
+  const [themeInitialized, setThemeInitialized] = useState(false);  // Create theme with light mode only
   const theme = useMemo(() => {
     const mode = 'light'; // Force light mode always
     const themeOptions = createThemeOptions(mode);
+    
+    // Helper function to ensure valid color strings
+    const ensureColorString = (color, defaultColor) => {
+      if (!color || typeof color !== 'string') {
+        return defaultColor;
+      }
+      return color;
+    };
     
     // Apply custom colors from state
     return createTheme({
@@ -82,7 +89,7 @@ function App() {
         primary: {
           main: (function() {
             // Prevent white/too light colors as primary
-            const primaryColor = themeColors.primary || colors.primary;
+            const primaryColor = ensureColorString(themeColors.primary, colors.primary);
             if (primaryColor === '#ffffff' || primaryColor === 'white' || 
                 (primaryColor.startsWith('#') && parseInt(primaryColor.substr(1), 16) > 0xefefef)) {
               console.log('[App] Primary color was too light, using blue instead');
@@ -90,17 +97,17 @@ function App() {
             }
             return primaryColor;
           })(),
-          light: themeColors.primaryLight || colors.primaryLight,
-          dark: themeColors.primaryDark || colors.primaryDark,
+          light: ensureColorString(themeColors.primaryLight, colors.primaryLight),
+          dark: ensureColorString(themeColors.primaryDark, colors.primaryDark),
           contrastText: '#ffffff',
         },
         secondary: {
-          main: themeColors.secondary || colors.gray, 
-          light: themeColors.secondaryLight || colors.grayLight,
-          dark: themeColors.secondaryDark || colors.grayDark,
+          main: ensureColorString(themeColors.secondary, colors.gray), 
+          light: ensureColorString(themeColors.secondaryLight, colors.grayLight), 
+          dark: ensureColorString(themeColors.secondaryDark, colors.grayDark),
           contrastText: '#ffffff',
         },        background: {
-          default: themeColors.background || themeOptions.palette.background.default,
+          default: ensureColorString(themeColors.background, themeOptions.palette.background.default),
           // Use CSS variables for paper backgrounds to ensure they're transparent when needed
           paper: 'var(--theme-background-paper, ' + themeOptions.palette.background.paper + ')',
           elevation1: themeOptions.palette.background.elevation1,
@@ -108,15 +115,13 @@ function App() {
           elevation3: themeOptions.palette.background.elevation3
         },
         text: {
-          primary: themeColors.textColor || themeOptions.palette.text.primary,
+          primary: ensureColorString(themeColors.textColor, themeOptions.palette.text.primary),
           secondary: themeOptions.palette.text.secondary,
           disabled: themeOptions.palette.text.disabled
         }
       }
     });
-  }, [themeColors]);
-
-  // Initial theme setup based on stored preferences
+  }, [themeColors]);  // Initial theme setup based on stored preferences
   useEffect(() => {
     const initializeTheme = async () => {
       try {
@@ -131,6 +136,13 @@ function App() {
             background: themeData.backgroundColor || undefined,
             textColor: themeData.textColor || undefined
           });
+          
+          // Update CSS variables with the theme data
+          // Make sure to set cardBackgroundColor to white to ensure cards are visible
+          ThemeService.updateCssVariables({
+            ...themeData,
+            cardBackgroundColor: componentColors.cardBackground
+          });
         }
         
         setThemeInitialized(true);
@@ -141,9 +153,7 @@ function App() {
     };
     
     initializeTheme();
-  }, [isAuthenticated]); // Re-run when authentication state changes
-
-  // Function to handle theme changes from InterviewerPanel
+  }, [isAuthenticated]); // Re-run when authentication state changes  // Function to handle theme changes from InterviewerPanel
   const handleThemeChange = useCallback((newThemeOptions) => {
     console.log("[App] Handling theme change:", newThemeOptions);
     if (!newThemeOptions || !newThemeOptions.palette) return;
@@ -156,41 +166,62 @@ function App() {
       textColor: newThemeOptions.palette.text?.primary
     };
     
-    // Apply CSS variable for immediate background color transitions
-    if (updatedColors.background) {
-      document.documentElement.style.setProperty('--theme-temp-background', updatedColors.background);
-    }
+    // Use the new helper method to update all CSS variables consistently
+    ThemeService.updateCssVariables({
+      primaryColor: updatedColors.primary,
+      secondaryColor: updatedColors.secondary,
+      backgroundColor: updatedColors.background,
+      textColor: updatedColors.textColor,
+      // Explicitly set card background to white to ensure visibility
+      cardBackgroundColor: componentColors.cardBackground
+    });
     
     console.log("[App] Setting theme colors to:", updatedColors);
     setThemeColors(updatedColors);
     
     // Store theme in ThemeService to persist changes
     ThemeService.saveThemeLocally(newThemeOptions);
-  }, []);
-
-  // Function to handle successful login
+  }, []);  // Function to handle successful login
   const handleLoginSuccess = async () => {
     setIsAuthenticated(true);
-    setUserRole(authService.getUserRole());
+    const role = authService.getUserRole();
+    setUserRole(role);
     
-    // Force theme refresh on login
-    try {
-      // Clear any cached theme data
-      ThemeService.clearCachedTheme();
-      
-      // Fetch and apply the latest theme
-      const themeData = await ThemeService.getActiveTheme(true); // force refresh
-      
-      if (themeData) {
-        setThemeColors({
-          primary: themeData.primaryColor || colors.primary,
-          secondary: themeData.secondaryColor || colors.secondary,
-          background: themeData.backgroundColor,
-          textColor: themeData.textColor
-        });
+    // Only fetch theme for interviewer role, not for admin
+    if (role !== 'admin') {
+      try {
+        // Clear any cached theme data
+        ThemeService.clearCachedTheme();
+        
+        // Fetch and apply the latest theme
+        const themeData = await ThemeService.getActiveTheme(true); // force refresh
+        
+        if (themeData) {
+          setThemeColors({
+            primary: themeData.primaryColor || colors.primary,
+            secondary: themeData.secondaryColor || colors.secondary,
+            background: themeData.backgroundColor,
+            textColor: themeData.textColor
+          });
+          
+          // Update CSS variables with theme data, ensuring cards have white background
+          ThemeService.updateCssVariables({
+            ...themeData,
+            cardBackgroundColor: componentColors.cardBackground
+          });
+        }
+      } catch (error) {
+        console.error("Failed to refresh theme after login:", error);
       }
-    } catch (error) {
-      console.error("Failed to refresh theme after login:", error);
+    } else {
+      // For admin, just use default theme colors
+      console.log("Admin login detected, using default theme");
+      setThemeColors({
+        primary: colors.primary,
+        secondary: colors.secondary,
+        background: colors.background,
+        textColor: colors.text
+      });
     }
   };
   

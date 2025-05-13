@@ -26,7 +26,6 @@ const AdminLogin = ({ adminAuthService, onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
   // Check if we have a fresh login message or error from URL params
   useEffect(() => {
     // Check for explicit logout or session expired message
@@ -37,7 +36,7 @@ const AdminLogin = ({ adminAuthService, onLoginSuccess }) => {
   }, [location]);
 
   // Update path to align with admin routes in AdminPanel
-  const from = location.state?.from?.pathname || "/admin/overview";
+  const from = location.state?.from?.pathname || "/admin/dashboard";
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -90,14 +89,19 @@ const AdminLogin = ({ adminAuthService, onLoginSuccess }) => {
           } 
         };
       }
-      
-      // Successfully logged in
+        // Successfully logged in
       console.log('Admin login successful, response:', data);
       
       // Store admin token and username in localStorage
       if (data.access_token) {
+        // Clear any existing regular user auth tokens to prevent conflicts
+        localStorage.removeItem('authToken');
+        
+        // Set admin-specific tokens and information
         localStorage.setItem('adminToken', data.access_token);
         localStorage.setItem('adminUsername', credentials.username);
+        // Set userRole to admin - this will be used by ThemeService and other services
+        localStorage.setItem('userRole', 'admin');
         
         if (data.admin_id) {
           localStorage.setItem('adminId', data.admin_id);

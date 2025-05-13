@@ -92,10 +92,10 @@ const AdminPanel = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [sessionStartTime, setSessionStartTime] = useState(new Date());
   const [sessionDuration, setSessionDuration] = useState('0m');
-  
-  useEffect(() => {
+    useEffect(() => {
     // Get admin username from localStorage
-    const storedUsername = localStorage.getItem('adminUsername') || localStorage.getItem('adminUser');
+    // Use adminUsername consistently across the application
+    const storedUsername = localStorage.getItem('adminUsername');
     if (storedUsername) {
       setAdminUsername(storedUsername);
     }
@@ -142,11 +142,12 @@ const AdminPanel = () => {
     
     return () => clearInterval(timer);
   }, []);
-
   const handleLogout = () => {
     // Clear authentication data from localStorage
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    localStorage.removeItem('adminUsername'); // Updated to match the key used in AdminLogin.js
+    localStorage.removeItem('adminId');
+    localStorage.removeItem('adminUser'); // Keep for backwards compatibility
     // Redirect to admin login page
     navigate('/admin/login');
   };

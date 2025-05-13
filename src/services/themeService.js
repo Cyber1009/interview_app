@@ -530,7 +530,6 @@ class ThemeService {  /**
       return null;
     }
   }
-
   /**
    * Get the active theme with all sources considered
    * @param {boolean} forceRefresh - Whether to force a refresh from the backend
@@ -540,6 +539,19 @@ class ThemeService {  /**
     // Check for active interview theme first (highest priority)
     if (this.hasActiveInterviewTheme()) {
       return this.getActiveInterviewTheme();
+    }
+    
+    // Check for admin user - admin users don't need themes from backend
+    const userRole = localStorage.getItem('userRole');
+    if (userRole === 'admin') {
+      console.log('[ThemeService] Admin user detected, returning default theme');
+      return {
+        primaryColor: colors.primary,
+        secondaryColor: colors.gray,
+        backgroundColor: colors.background,
+        textColor: colors.text,
+        logoUrl: null
+      };
     }
     
     try {
@@ -625,8 +637,7 @@ class ThemeService {  /**
       console.error('Failed to update theme cache:', error);
     }
   }
-  
-  /**
+    /**
    * Get the theme cache from localStorage
    * @returns {Object|null} - Cached theme data or null if not found
    * @private
@@ -639,6 +650,44 @@ class ThemeService {  /**
       console.error('Failed to read theme cache:', error);
       return null;
     }
+  }
+  
+  /**
+   * Update CSS variables used for theme styling across the application
+   * @param {Object} themeData - Theme data containing colors
+   */
+  updateCssVariables(themeData) {
+    if (!themeData) return;
+    
+    // Get the document's root element to set CSS variables
+    const root = document.documentElement;
+    
+    // Update main background color
+    if (themeData.backgroundColor) {
+      root.style.setProperty('--theme-background-color', themeData.backgroundColor);
+    }
+    
+    // Update card background color - this is crucial for card visibility
+    if (themeData.cardBackgroundColor || themeData.backgroundColor) {
+      // Prefer specific card background if provided, otherwise use standard white
+      const cardBg = themeData.cardBackgroundColor || componentColors.cardBackground;
+      root.style.setProperty('--theme-background-paper', cardBg);
+    }
+    
+    // Update other theme colors
+    if (themeData.primaryColor) {
+      root.style.setProperty('--theme-primary-color', themeData.primaryColor);
+    }
+    
+    if (themeData.secondaryColor || themeData.accentColor) {
+      root.style.setProperty('--theme-accent-color', themeData.secondaryColor || themeData.accentColor);
+    }
+    
+    if (themeData.textColor) {
+      root.style.setProperty('--theme-text-color', themeData.textColor);
+    }
+    
+    console.log('[ThemeService] CSS variables updated with theme data');
   }
   
   // Note: Dark mode functionality has been removed to prevent theme mode switching issues

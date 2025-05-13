@@ -56,8 +56,8 @@
   --border-radius-lg: 18px;
   --border-radius-xl: 24px;
   --border-radius-round: 50%;  /* Theme CSS variables for real-time color changes */
-  --theme-background-color: transparent;
-  --theme-background-paper: transparent; /* New variable for paper elements */
+  --theme-background-color: var(--background);
+  --theme-background-paper: var(--surface); /* Default to surface color instead of transparent */
   --theme-primary-color: var(--primary);
   --theme-accent-color: var(--info);
   --theme-text-color: var(--text);
@@ -105,8 +105,10 @@ code {
 }
 
 /* Card styles */
-.MuiCard-root, .MuiPaper-root {
+.MuiCard-root, .MuiPaper-root:not(.MuiPopover-paper):not(.MuiMenu-paper):not(.MuiAlert-root) {
   background-color: var(--theme-background-paper, white) !important;
+  /* Ensure cards are visible with a minimum contrast */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
 .color-selector-container {

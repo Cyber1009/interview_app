@@ -25,7 +25,7 @@ import {
   Snackbar,
   alpha
 } from '@mui/material';
-import { colors } from '../../styles/theme';
+import { colors, componentColors } from '../../styles/theme';
 import {
   Upload as UploadIcon,
   Delete as DeleteIcon,
@@ -35,8 +35,6 @@ import { ThemeService } from '../../services';
 import { useTheme } from '@mui/material/styles';
 import { createThemeOptions } from '../../styles';
 import { debounce } from 'lodash';
-
-// Import color utility functions
 import { 
   hexToRgb, 
   calculateLuminance, 
@@ -52,13 +50,12 @@ const ThemeSettings = ({ onThemeChange, logo, onLogoChange }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  
-  // Theme state
+    // Theme state using our simplified color palette
   const [themeData, setThemeData] = useState({
-    primary_color: '#3f51b5',
-    accent_color: '#f50057',
-    background_color: '#f5f5f5',
-    text_color: '#333333',
+    primary_color: colors.primary,
+    accent_color: colors.gray,
+    background_color: colors.grayMedium,
+    text_color: colors.gray,
     logo_url: '',
     enable_dark_mode: false
   });

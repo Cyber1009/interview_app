@@ -8,6 +8,8 @@ export * from './auth';
 
 // UI and visual utilities
 export * from './colorExtractor';
+export * from './colorUtils';
+export * from './themeUtils';
 
 // Token management utilities
 export * from './tokenGenerator';

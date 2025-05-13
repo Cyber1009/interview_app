@@ -1,44 +1,106 @@
 /**
- * Consolidated Theme Configuration
+ * Simplified Theme Configuration
  * 
- * This file serves as the central source for all theme-related configurations:
- * - Color palette definitions
- * - Light/dark theme variants
- * - MUI theme customizations
- * - Reusable style constants
+ * Core theme values taken directly from sample.html for consistency.
+ * This file serves as the central source for color definitions used throughout the app.
  */
 
 import { createTheme, alpha } from '@mui/material/styles';
 
 // -----------------------------------------------------
-// BASE COLOR PALETTE
-// Primary palette used throughout the application
+// SIMPLIFIED COLOR PALETTE - Based on sample.html
+// Core colors used throughout the application
 // -----------------------------------------------------
 export const colors = {
-  // Brand colors
-  primary: '#091326',      // Main brand color - dark blue
-  primaryLight: '#1a233a', // Lighter variant
+  // Core UI colors from sample.html
+  primary: '#091326',      // Main brand/header/button background color
+  primaryLight: '#1a233a', // Lighter variant for hover states
+  
+  // Grays - from sample.html
+  gray: '#52606d',         // Label and secondary text color 
+  grayLight: '#d1d5db',    // Border color
+  grayLighter: '#e5eaf1',  // Label background color
+  grayMedium: '#b6c2c9',   // Main background color
+  
+  // Base colors
+  white: '#ffffff',        // Card background and button text color
+  black: '#000000',        // Used for deep shadows
+  
+  // Status colors - for feedback states
+  success: '#7bae7e',      // Success state
+  warning: '#ff9800',      // Warning state
+  error: '#e75552',        // Error state
+  info: '#a4cae5',         // Info state
+  
+  // Shadows
+  shadow: 'rgba(80,86,96,0.10)'  // Card/element shadows
+};
+
+/* Original expanded color palette - kept for reference
+export const originalColors = {
+  // Core UI colors
+  primary: '#091326',      // Main brand/header color
+  primaryLight: '#1a233a', // Lighter variant 
   primaryDark: '#050a15',  // Darker variant
   
   // Grays
-  gray: '#52606d',        // Main gray
+  gray: '#52606d',        // Main gray text
   grayLight: '#d1d5db',   // Light gray for borders
   grayLighter: '#e5eaf1', // Lighter gray for backgrounds
   grayLightest: '#f5f7fa', // Lightest gray for search backgrounds
   grayMedium: '#b6c2c9',  // Medium gray for backgrounds
-  grayDark: '#3a4550',    // Dark gray
+  
+  // White/Black
+  white: '#ffffff',       // White
+  black: '#000000',       // Black
   
   // Status colors
-  success: '#7bae7e',     // Green for success states
-  warning: '#ff9800',     // Orange for warning states
-  error: '#e75552',       // Red for error states
-  info: '#a4cae5',        // Blue for info states
-  neutral: '#757575',     // Gray for neutral states
+  success: '#7bae7e',     
+  warning: '#ff9800',     
+  error: '#e75552',       
+  info: '#a4cae5',        
+  neutral: '#757575',     
   
-  // Common
-  white: '#ffffff',
-  black: '#000000',
+  // Light/dark mode status backgrounds
+  statusBgLight: {
+    success: '#b5e7b8',  
+    warning: '#e8d5b6',  
+    error: '#fee1e5',    
+    info: '#e3f2fd',     
+    neutral: '#f4cfcf'   
+  },
+  
+  statusBgDark: {
+    success: '#253c26',  
+    warning: '#493000',  
+    error: '#441a18',    
+    info: '#0d3c61',     
+    neutral: '#424242'   
+  },
+  
+  // Text colors
+  text: {
+    light: {
+      primary: '#091326', 
+      secondary: '#52606d',
+      disabled: '#8a9198'
+    },
+    dark: {
+      primary: '#e0e0e0', 
+      secondary: '#b0b0b0',
+      disabled: '#707070'
+    }
+  },
+  
+  // Shadows
+  shadows: {
+    card: 'rgba(80,86,96,0.10)',
+    button: 'rgba(9,19,38,0.08)',
+    buttonHover: 'rgba(9,19,38,0.15)',
+    dark: 'rgba(0,0,0,0.20)'
+  }
 };
+*/
 
 // -----------------------------------------------------
 // STATUS COLORS
@@ -51,7 +113,7 @@ export const statusColors = {
   degraded: colors.warning,
   error: colors.error,
   offline: colors.error,
-  unknown: colors.neutral,
+  unknown: colors.gray,
   loading: colors.info,
 };
 
@@ -67,7 +129,7 @@ export const componentColors = {
   buttonBackground: colors.primary,
   buttonColor: colors.white,
   headerColor: colors.primary,
-  searchBackground: colors.grayLightest,
+  searchBackground: colors.grayLighter,
   searchBorder: colors.grayLight,
 };
 
@@ -77,40 +139,8 @@ export const componentColors = {
  * @returns {Object} - Complete palette configuration
  */
 export const createPalette = (mode) => {
-  // Mode-specific colors
-  const modeColors = {
-    light: {
-      // Use white as default background for light mode instead of grayMedium
-      // This allows the extracted colors to be visible
-      background: colors.white,
-      paper: colors.white,
-      textPrimary: colors.primary,
-      textSecondary: colors.gray,
-      textDisabled: '#8a9198',
-      statusBgSuccess: '#b5e7b8',
-      statusBgWarning: '#fff3e0',
-      statusBgError: '#ffebee',
-      statusBgInfo: '#e3f2fd',
-      statusBgNeutral: '#f5f5f5',
-      secondaryLight: '#7b8996',
-    },
-    dark: {
-      background: colors.primaryLight,
-      paper: '#222b42',
-      textPrimary: '#e0e0e0',
-      textSecondary: '#b0b0b0',
-      textDisabled: '#707070',
-      statusBgSuccess: '#253c26',
-      statusBgWarning: '#493000',
-      statusBgError: '#441a18',
-      statusBgInfo: '#0d3c61',
-      statusBgNeutral: '#424242',
-      secondaryLight: '#d8e1e6',
-    }
-  };
-  
-  // Current mode colors
-  const themeColors = modeColors[mode];
+  // We default everything to light mode for simplicity
+  mode = 'light';
   
   // Define base palette
   return {
@@ -118,13 +148,13 @@ export const createPalette = (mode) => {
     primary: {
       main: colors.primary,
       light: colors.primaryLight,
-      dark: colors.primaryDark,
+      dark: colors.primary,
       contrastText: colors.white,
     },
     secondary: {
       main: colors.gray,
-      light: themeColors.secondaryLight,
-      dark: colors.grayDark,
+      light: alpha(colors.gray, 0.8),
+      dark: colors.gray,
       contrastText: colors.white,
     },
     success: {
@@ -144,47 +174,30 @@ export const createPalette = (mode) => {
       contrastText: colors.white,
     },
     background: {
-      default: themeColors.background,
-      paper: themeColors.paper,
-      elevation1: themeColors.paper,
-      elevation2: mode === 'light' ? colors.grayLightest : '#2a3349',
-      elevation3: mode === 'light' ? colors.grayLighter : '#323d56',
+      default: colors.grayMedium, // From sample.html
+      paper: colors.white,
+      elevation1: colors.white,
+      elevation2: colors.grayLighter,
+      elevation3: colors.grayLighter,
     },
     text: {
-      primary: themeColors.textPrimary,
-      secondary: themeColors.textSecondary,
-      disabled: themeColors.textDisabled,
-    },
-    // Status backgrounds
-    statusBg: {
-      success: themeColors.statusBgSuccess,
-      warning: themeColors.statusBgWarning,
-      error: themeColors.statusBgError,
-      info: themeColors.statusBgInfo,
-      neutral: themeColors.statusBgNeutral,
+      primary: colors.primary,
+      secondary: colors.gray,
+      disabled: alpha(colors.gray, 0.6),
     },
     // Status colors for direct access
     status: statusColors,
-    // Admin palette integration
+    // Admin palette integration - simplified
     admin: {
       main: colors.primary,
       light: colors.primaryLight,
-      dark: colors.primaryDark,
+      dark: colors.primary,
       contrastText: colors.white,
       header: colors.primary,
       headerText: colors.white,
-      card: themeColors.paper,
-      hover: `rgba(9, 19, 38, ${mode === 'light' ? 0.08 : 0.15})`,
-      gradient: `linear-gradient(45deg, ${colors.primary} ${mode === 'light' ? '30%' : '0%'}, ${colors.primaryLight} ${mode === 'light' ? '90%' : '100%'})`,
-      // Status colors
-      successBg: themeColors.statusBgSuccess,
-      successBorder: colors.success,
-      warningBg: themeColors.statusBgWarning,
-      warningBorder: colors.warning,
-      errorBg: themeColors.statusBgError,
-      errorBorder: colors.error,
-      unknownBg: themeColors.statusBgNeutral,
-      unknownBorder: colors.neutral,
+      card: colors.white,
+      hover: alpha(colors.primary, 0.08),
+      gradient: `linear-gradient(45deg, ${colors.primary} 30%, ${colors.primaryLight} 90%)`,
     }
   };
 };
@@ -202,9 +215,7 @@ export const createThemeOptions = (mode) => {
     customGradients: {
       primary: `linear-gradient(45deg, ${colors.primary} 30%, ${colors.primaryLight} 90%)`,
       secondary: `linear-gradient(45deg, ${colors.gray} 30%, ${palette.secondary.light} 90%)`,
-      background: mode === 'light' 
-        ? `linear-gradient(120deg, ${colors.grayLighter} 0%, ${colors.white} 100%)`
-        : `linear-gradient(120deg, ${colors.primaryLight} 0%, ${palette.background.paper} 100%)`,
+      background: `linear-gradient(120deg, ${colors.grayLighter} 0%, ${colors.white} 100%)`,
     },
     typography: {
       fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -222,15 +233,12 @@ export const createThemeOptions = (mode) => {
     shape: {
       borderRadius: 18,
     },
-    components: {
-      MuiButton: {
-        styleOverrides: {
-          root: {
+    components: {      MuiButton: {
+        styleOverrides: {          root: {
             borderRadius: '2em',
-            padding: '0.6em 1.6em',
-            boxShadow: '0 2px 8px 0 rgba(9,19,38,0.08)',
+            padding: '0.6em 1.6em',            boxShadow: `0 2px 8px 0 rgba(9,19,38,0.08)`,
             '&:hover': {
-              boxShadow: '0px 2px 10px rgba(9,19,38,0.15)',
+              boxShadow: `0px 2px 10px rgba(9,19,38,0.15)`,
               background: colors.primaryLight,
             },
           },
@@ -251,11 +259,8 @@ export const createThemeOptions = (mode) => {
           root: {
             backgroundImage: 'none',
             borderRadius: 18,
-          },
-          elevation1: {
-            boxShadow: mode === 'light' 
-              ? '0 4px 24px 0 rgba(80,86,96,0.10)'
-              : '0 4px 24px 0 rgba(0,0,0,0.20)',
+          },          elevation1: {
+            boxShadow: `0 4px 24px 0 ${colors.shadow}`,
           },
         },
       },
