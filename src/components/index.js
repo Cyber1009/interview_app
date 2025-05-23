@@ -16,7 +16,7 @@ export { default as AdminLogin } from './core/auth/AdminLogin';
 export { default as ErrorBoundary } from './core/error/ErrorBoundary';
 
 // UI components
-export { default as NotFound } from './core/ui/NotFound';
+export { default as NotFound } from './core/ui/404NotFound';
 export { default as LoadingOverlay } from './core/ui/LoadingOverlay';
 export { default as CameraPermissions } from './core/ui/CameraPermissions';
 

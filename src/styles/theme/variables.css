@@ -1,0 +1,37 @@
+/**
+ * Global CSS Variables
+ * Single source of truth for CSS-based styling
+ */
+
+:root {
+  /* Base Theme Colors */
+  --color-primary: #091326;
+  --color-accent: #52606d;
+  --color-background: #b6c2c9;
+  --color-surface: #ffffff;
+  --color-text: #52606d;
+
+  /* Status colors */
+  --color-success: #7bae7e;
+  --color-warning: #ff9800;
+  --color-error: #e75552;
+  --color-info: #a4cae5;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(80,86,96,0.10);
+  --shadow-md: 0 4px 8px rgba(80,86,96,0.10);
+  --shadow-lg: 0 8px 16px rgba(80,86,96,0.10);
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-round: 50%;
+}
