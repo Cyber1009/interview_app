@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { Paper, Box, CircularProgress } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import InterviewerDashboardLayout from './InterviewerDashboardLayout';
+
+// FIXED: Use InterviewerLayout instead of InterviewerDashboardLayout for SlimSidebar
+import InterviewerLayout from './InterviewerLayout';
 
 // Import interviewer components - only include what's needed
 import InterviewerDashboard from './InterviewerDashboard';
 import InterviewManager from './InterviewManager';
-import InterviewList from './InterviewList';
+import InterviewsTab from './InterviewsTab';
 import UserProfile from './UserProfile';
 import ThemeSettings from './ThemeSettings';
 import CreateInterview from './CreateInterview';
@@ -23,14 +25,13 @@ import { alpha } from '@mui/material/styles';
 /**
  * InterviewerPanel Component
  * Main container for interviewer functionality with:
- * - Consistent layout and navigation
+ * - Consistent layout and navigation using SlimSidebarLayout
  * - Simplified routing with hierarchical structure aligned with backend
  * - Theme management integration
  */
 const InterviewerPanel = ({ onThemeChange }) => {
-  // Use a stable ref to track initialization state
+  // ...existing code...
   const isInitialized = useRef(false);
-  // Use a stable ref for logo to ensure persistence across rerenders
   const logoRef = useRef(null);
   const [logo, setLogo] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -38,29 +39,20 @@ const InterviewerPanel = ({ onThemeChange }) => {
   const [currentTheme, setCurrentTheme] = useState(null);
   const location = useLocation();
   
-  // Wrap handlers in useCallback to prevent unnecessary re-renders
+  // ...existing handlers and effects...
   const handleLogoChange = useCallback((logoData) => {
     console.log("Logo changed:", logoData ? "New logo set" : "Logo removed");
-    
-    // Store in both state and ref for persistence
     setLogo(logoData);
     logoRef.current = logoData;
   }, []);
   
-  // Handle theme changes from child components
   const handleThemeChange = useCallback((newThemeOptions) => {
     try {
       console.log("[InterviewerPanel] Received new theme options:", newThemeOptions);
-      
-      // Create a new theme with the provided options
       const newTheme = createTheme(newThemeOptions);
-      
-      // Apply to local state
       setCurrentTheme(newTheme);
       
-      // IMPORTANT: Propagate the theme change to the parent component (App)
       if (onThemeChange) {
-        // Pass along the full theme options to ensure all properties are updated
         onThemeChange(newThemeOptions);
         console.log("[InterviewerPanel] Propagated theme change to App component");
       } else {
@@ -69,27 +61,21 @@ const InterviewerPanel = ({ onThemeChange }) => {
     } catch (error) {
       console.error('[InterviewerPanel] Failed to apply theme change:', error);
     }
-  }, [onThemeChange]);  // Using imported color utility functions from colorUtils.js
+  }, [onThemeChange]);
 
-  // Effect for initializing theme when component mounts
+  // ...existing useEffect hooks...
   useEffect(() => {
     const initializeTheme = async () => {
       try {
         setThemeLoading(true);
-        
-        // Load theme from backend via ThemeService
-        const activeTheme = await ThemeService.getActiveTheme(true); // Force refresh on initial load
+        const activeTheme = await ThemeService.getActiveTheme(true);
         
         if (activeTheme) {
-          // Update logo state if available
           if (activeTheme.logoUrl) {
             setLogo(activeTheme.logoUrl);
           }
           
-          // Create MUI theme based on extracted colors
-          const themeOptions = createThemeOptions('light'); // Always use light mode
-          
-          // Get enhanced colors with proper contrast
+          const themeOptions = createThemeOptions('light');
           const enhancedColors = createContrastEnsuredPalette(
             activeTheme.primaryColor,
             activeTheme.secondaryColor || activeTheme.accentColor,
@@ -97,7 +83,6 @@ const InterviewerPanel = ({ onThemeChange }) => {
             activeTheme.textColor
           );
           
-          // Apply enhanced main colors with proper contrast
           themeOptions.palette.primary = {
             ...themeOptions.palette.primary,
             main: enhancedColors.adjustedPrimary,
@@ -109,21 +94,18 @@ const InterviewerPanel = ({ onThemeChange }) => {
             themeOptions.palette.secondary.main = enhancedColors.secondary;
           }
           
-          // Apply background with subtle tinting for better visual separation
           themeOptions.palette.background = {
             ...themeOptions.palette.background,
             default: enhancedColors.background,
-            paper: adjustColorLuminance(enhancedColors.background, 0.02), // Slightly different paper background
+            paper: adjustColorLuminance(enhancedColors.background, 0.02),
           };
           
-          // Set text colors
           themeOptions.palette.text = {
             ...themeOptions.palette.text,
             primary: enhancedColors.text,
-            secondary: adjustColorLuminance(enhancedColors.text, 0.2), // Lighter/darker secondary text
+            secondary: adjustColorLuminance(enhancedColors.text, 0.2),
           };
           
-          // Store custom selection and interaction colors
           themeOptions.custom = {
             ...themeOptions.custom,
             selectionColor: enhancedColors.selectionColor,
@@ -131,10 +113,7 @@ const InterviewerPanel = ({ onThemeChange }) => {
             neutralColor: activeTheme.neutralColor || '#9e9e9e',
           };
           
-          // Create the theme with our custom options
           const newTheme = createTheme(themeOptions);
-          
-          // Apply to state
           setCurrentTheme(newTheme);
           console.log("[InterviewerPanel] Applied theme from backend with enhanced colors:", enhancedColors);
         }
@@ -148,9 +127,7 @@ const InterviewerPanel = ({ onThemeChange }) => {
     initializeTheme();
   }, []);
   
-  // Initial theme and logo load - only runs ONCE
   useEffect(() => {
-    // Prevent duplicate initialization
     if (isInitialized.current) return;
     
     let isMounted = true;
@@ -158,27 +135,20 @@ const InterviewerPanel = ({ onThemeChange }) => {
     const initializeThemeAndLogo = async () => {
       try {
         console.log("Initializing theme and logo...");
-        
-        // Get theme data
         const userTheme = await ThemeService.initializeUserTheme();
-        
-        // Get logo URL on initial mount
         const logoUrl = await ThemeService.getLogoUrl();
         console.log("Initial logo URL:", logoUrl);
         
         if (isMounted) {
-          // Apply theme only once during initialization
           if (onThemeChange && userTheme) {
             onThemeChange(userTheme);
           }
           
-          // Set logo if available
           if (logoUrl) {
             setLogo(logoUrl);
             logoRef.current = logoUrl;
           }
           
-          // Mark as initialized
           isInitialized.current = true;
           setInitialLoading(false);
         }
@@ -186,7 +156,7 @@ const InterviewerPanel = ({ onThemeChange }) => {
         console.error("Failed to initialize theme and logo:", error);
         if (isMounted) {
           setInitialLoading(false);
-          isInitialized.current = true; // Mark as initialized even on error
+          isInitialized.current = true;
         }
       }
     };
@@ -196,25 +166,19 @@ const InterviewerPanel = ({ onThemeChange }) => {
     return () => {
       isMounted = false;
     };
-  }, []); // No dependencies - run once on mount
+  }, []);
   
-  // Effect to update logo when navigating to theme page
-  // Separated to avoid flashing and unnecessary renders
   useEffect(() => {
-    // Skip if not initialized yet
     if (!isInitialized.current || initialLoading) return;
     
     const isThemePage = location.pathname.includes('/theme');
     
     if (isThemePage) {
-      // When navigating TO the theme page, ensure we have the latest logo
-      // This effect is specifically for synchronization, not for showing loading state
       const syncLogoFromBackend = async () => {
         console.log("Syncing logo from backend on theme page visit");
         try {
           const logoUrl = await ThemeService.getLogoUrl();
           
-          // Only update if logo actually changed
           if (logoUrl && logoUrl !== logoRef.current) {
             setLogo(logoUrl);
             logoRef.current = logoUrl;
@@ -226,8 +190,6 @@ const InterviewerPanel = ({ onThemeChange }) => {
       
       syncLogoFromBackend();
     } else {
-      // When navigating AWAY from theme page, ensure we use the ref value
-      // This prevents the logo from disappearing in the layout
       if (logoRef.current && logoRef.current !== logo) {
         console.log("Restoring logo from ref");
         setLogo(logoRef.current);
@@ -235,7 +197,6 @@ const InterviewerPanel = ({ onThemeChange }) => {
     }
   }, [location.pathname, initialLoading, logo]); 
 
-  // Initial loading state
   if (initialLoading || themeLoading) {
     return (
       <Box sx={{ 
@@ -250,18 +211,17 @@ const InterviewerPanel = ({ onThemeChange }) => {
     );
   }
 
-  return (    <InterviewerDashboardLayout logo={logo} onThemeChange={handleThemeChange}>      <Paper 
+  return (
+    <InterviewerLayout logo={logo} onThemeChange={handleThemeChange}>
+      <Paper 
         elevation={0}
         sx={{ 
           p: 0,
           boxShadow: 'none',
           height: '100%',
           borderRadius: 0,
-          // Use fully transparent background with !important to override any Material-UI defaults
           bgcolor: 'transparent !important',
-          // Remove any borders
           border: 'none',
-          // Make sure this paper is positioned properly in the stacking context
           position: 'relative',
           zIndex: 1
         }}
@@ -270,7 +230,7 @@ const InterviewerPanel = ({ onThemeChange }) => {
           {/* Main routes */}
           <Route path="/" element={<InterviewerDashboard />} />
           <Route path="/dashboard" element={<InterviewerDashboard />} />
-          <Route path="/interviews" element={<InterviewList />} />
+          <Route path="/interviews" element={<InterviewsTab />} />
           <Route path="/interviews/create" element={<CreateInterview />} />
           <Route path="/interviews/:interviewId/*" element={<InterviewManager />} />
           <Route path="/profile" element={<UserProfile />} />
@@ -288,7 +248,7 @@ const InterviewerPanel = ({ onThemeChange }) => {
           <Route path="/config" element={<InterviewConfigManager />} />
         </Routes>
       </Paper>
-    </InterviewerDashboardLayout>
+    </InterviewerLayout>
   );
 };
 

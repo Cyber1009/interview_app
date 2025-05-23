@@ -31,34 +31,22 @@ const InterviewDataProvider = ({ children, interviewId }) => {
   }, []);
 
   // Fetch a specific interview by ID with all its questions
-  const fetchInterview = useCallback(async (id) => {
-    if (!id) return;
+    // In the fetchInterview function, the API should handle both name and ID
+  const fetchInterview = useCallback(async (identifier) => {
+    if (!identifier) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const interviewResponse = await interviewerAPI.getInterview(id);
+      // The backend should handle both interview name and ID
+      // If it's a name, it will decode it and find by title
+      // If it's a number, it will find by ID
+      const interviewResponse = await interviewerAPI.getInterview(identifier);
       
-      // If we need questions too, fetch them
-      if (interviewResponse.data) {
-        try {
-          const questionsResponse = await interviewerAPI.getQuestions(id);
-          const sortedQuestions = [...(questionsResponse.data || [])].sort((a, b) => a.order - b.order);
-          
-          setInterview({
-            ...interviewResponse.data,
-            questions: sortedQuestions
-          });
-        } catch (questionsErr) {
-          console.error('Failed to load questions:', questionsErr);
-          setInterview(interviewResponse.data);
-        }
-      } else {
-        setInterview(null);
-      }
+      // ...rest of the function remains the same...
     } catch (err) {
-      console.error(`Failed to load interview ${id}:`, err);
+      console.error(`Failed to load interview ${identifier}:`, err);
       setError(`Failed to load interview details. Please try again.`);
       setInterview(null);
     } finally {

@@ -52,6 +52,7 @@ import { interviewerAPI } from '../../../api';
  */
 const QuestionManager = ({ 
   interviewId, 
+  interviewName,
   questions: initialQuestions = [], 
   loading = false,
   error = null,
@@ -67,6 +68,9 @@ const QuestionManager = ({
     preparation_time: 60,
     responding_time: 120
   });
+
+  // Use interview name (slug) if available, otherwise use ID
+  const identifier = interviewName || interviewId;
 
   // Update local state when props change
   useEffect(() => {
@@ -86,7 +90,8 @@ const QuestionManager = ({
     setIsSaving(true);
     try {
       const questionData = {
-        interviewId,
+        interviewName: interviewName,
+        interviewId: interviewId,
         text: newQuestion.text,
         preparation_time: Number(newQuestion.preparation_time) || 60,
         responding_time: Number(newQuestion.responding_time) || 120
@@ -121,7 +126,7 @@ const QuestionManager = ({
     setIsSaving(true);
     try {
       const response = await interviewerAPI.updateQuestion(
-        interviewId, 
+        identifier, 
         editingQuestion.id, 
         {
           text: editingQuestion.text,
@@ -151,7 +156,7 @@ const QuestionManager = ({
   const handleDeleteQuestion = async (questionId) => {
     setIsSaving(true);
     try {
-      await interviewerAPI.deleteQuestion(interviewId, questionId);
+      await interviewerAPI.deleteQuestion(identifier, questionId);
       
       const updatedQuestions = questions.filter(q => q.id !== questionId);
       setQuestions(updatedQuestions);
@@ -172,7 +177,7 @@ const QuestionManager = ({
     const reorderedQuestions = Array.from(questions);
     const [removed] = reorderedQuestions.splice(result.source.index, 1);
     reorderedQuestions.splice(result.destination.index, 0, removed);
-    
+
     // Update local state immediately for smooth UX
     setQuestions(reorderedQuestions);
     
@@ -184,7 +189,7 @@ const QuestionManager = ({
     
     // Save the new order to the server
     try {
-      await interviewerAPI.reorderQuestions(interviewId, orderUpdates);
+      await interviewerAPI.reorderQuestions(identifier, orderUpdates);
       onQuestionsChange(reorderedQuestions);
     } catch (err) {
       console.error('Failed to reorder questions:', err);

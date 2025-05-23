@@ -31,13 +31,12 @@ const interviewerAPI = {
    * @returns {Promise} - Promise with interview list
    */
   getAllInterviews: () => api.get('/interviewer/interviews'),
-
   /**
-   * Get a specific interview by id
-   * @param {string|number} id - Interview ID
+   * Get a specific interview by name or id
+   * @param {string|number} identifier - Interview name (slug) or ID
    * @returns {Promise} - Promise with interview data
    */
-  getInterview: (id) => api.get(`/interviewer/interviews/${id}`),
+  getInterview: (identifier) => api.get(`/interviewer/interviews/${identifier}`),
 
   /**
    * Create a new interview
@@ -45,14 +44,13 @@ const interviewerAPI = {
    * @returns {Promise} - Promise with created interview
    */
   createInterview: (interviewData) => api.post('/interviewer/interviews', interviewData),
-
   /**
    * Update an interview
-   * @param {string|number} id - Interview ID
+   * @param {string} identifier - Interview name (slug) or ID
    * @param {Object} interviewData - Updated interview data
    * @returns {Promise} - Promise with updated interview
    */
-  updateInterview: (id, interviewData) => api.put(`/interviewer/interviews/${id}`, interviewData),
+  updateInterview: (identifier, interviewData) => api.put(`/interviewer/interviews/${identifier}`, interviewData),
   
   /**
    * Update an interview with questions in a single call
@@ -64,19 +62,18 @@ const interviewerAPI = {
 
   /**
    * Delete an interview
-   * @param {string|number} id - Interview ID
+   * @param {string|number} identifier - Interview name (slug) or ID
    * @returns {Promise} - Promise with deletion result
    */
-  deleteInterview: (id) => api.delete(`/interviewer/interviews/${id}`),
+  deleteInterview: (identifier) => api.delete(`/interviewer/interviews/${identifier}`),
 
   // ==================== Question Management ====================
-  
-  /**
+    /**
    * Get questions for an interview
-   * @param {string|number} interviewId - Interview ID
+   * @param {string|number} identifier - Interview name (slug) or ID
    * @returns {Promise} - Promise with questions data
    */
-  getQuestions: (interviewId) => api.get(`/interviewer/interviews/${interviewId}/questions`),
+  getQuestions: (identifier) => api.get(`/interviewer/interviews/${identifier}/questions`),
   
   /**
    * Get questions by interview (alias for getQuestions for backward compatibility)
@@ -87,12 +84,13 @@ const interviewerAPI = {
 
   /**
    * Add a question to an interview
-   * @param {Object} questionData - Question data with interviewId
+   * @param {Object} questionData - Question data with interviewName or interviewId
    * @returns {Promise} - Promise with created question
    */
   addQuestion: (questionData) => {
-    const { interviewId, ...data } = questionData;
-    return api.post(`/interviewer/interviews/${interviewId}/edit`, {
+    const { interviewId, interviewName, ...data } = questionData;
+    const identifier = interviewName || interviewId;
+    return api.post(`/interviewer/interviews/${identifier}/edit`, {
       action: "add",
       question_data: data
     });
@@ -100,13 +98,13 @@ const interviewerAPI = {
 
   /**
    * Update a question in an interview
-   * @param {string|number} interviewId - Interview ID
+   * @param {string|number} identifier - Interview name (slug) or ID
    * @param {string|number} questionId - Question ID
    * @param {Object} questionData - Updated question data
    * @returns {Promise} - Promise with updated question
    */
-  updateQuestion: (interviewId, questionId, questionData) => {
-    return api.post(`/interviewer/interviews/${interviewId}/edit`, {
+  updateQuestion: (identifier, questionId, questionData) => {
+    return api.post(`/interviewer/interviews/${identifier}/edit`, {
       action: "update",
       question_id: questionId,
       question_data: questionData
@@ -115,12 +113,12 @@ const interviewerAPI = {
 
   /**
    * Delete a question from an interview
-   * @param {string|number} interviewId - Interview ID
+   * @param {string|number} identifier - Interview name (slug) or ID
    * @param {string|number} questionId - Question ID
    * @returns {Promise} - Promise with deletion result
    */
-  deleteQuestion: (interviewId, questionId) => {
-    return api.post(`/interviewer/interviews/${interviewId}/edit`, {
+  deleteQuestion: (identifier, questionId) => {
+    return api.post(`/interviewer/interviews/${identifier}/edit`, {
       action: "delete",
       question_id: questionId
     });
@@ -128,12 +126,12 @@ const interviewerAPI = {
 
   /**
    * Reorder questions in an interview
-   * @param {string|number} interviewId - Interview ID
+   * @param {string|number} identifier - Interview name (slug) or ID
    * @param {Array} orderUpdates - Array of question order updates
    * @returns {Promise} - Promise with reordered questions
    */
-  reorderQuestions: (interviewId, orderUpdates) => {
-    return api.post(`/interviewer/interviews/${interviewId}/edit`, {
+  reorderQuestions: (identifier, orderUpdates) => {
+    return api.post(`/interviewer/interviews/${identifier}/edit`, {
       action: "reorder",
       order_updates: orderUpdates
     });

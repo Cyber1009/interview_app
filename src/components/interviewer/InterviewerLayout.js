@@ -21,7 +21,7 @@ import SlimSidebarLayout from '../core/layout/SlimSidebarLayout';
 import { AuthService } from '../../services';
 import { Popover, Box, Typography, Avatar, Divider, Button, alpha } from '@mui/material';
 
-const InterviewerDashboardLayout = ({ children, logo, onThemeChange }) => {
+const InterviewerLayout = ({ children, logo, onThemeChange }) => {
   const navigate = useNavigate();
   const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   // Define navigation items for the interviewer dashboard
@@ -45,7 +45,7 @@ const InterviewerDashboardLayout = ({ children, logo, onThemeChange }) => {
 
   // Custom logout handler that uses AuthService for proper logout
   const handleLogout = () => {
-    console.log('Logging out from InterviewerDashboardLayout');
+    console.log('Logging out from InterviewerDashboard');
     // Use the AuthService logout method with navigate function
     AuthService.logout(navigate);
   };
@@ -158,4 +158,4 @@ const InterviewerDashboardLayout = ({ children, logo, onThemeChange }) => {
   );
 };
 
-export default InterviewerDashboardLayout;
+export default InterviewerLayout;

@@ -1,66 +1,100 @@
-import React, { useState, useEffect, useCallback } from 'react';
-// Import from consolidated API structure
+import React, { createContext, useState, useCallback, useEffect, useContext } from 'react';
 import { interviewerAPI } from '../../../api';
 
-/**
- * InterviewDataProvider Component - Context provider for interview data
- * 
- * Handles all interview data fetching, state management, and CRUD operations
- * Used across multiple components to provide consistent data access
- */
-const InterviewDataProvider = ({ children, interviewId }) => {
-  const [interviews, setInterviews] = useState([]);
+// Create the context with initial values
+const InterviewDataContext = createContext({
+  interview: null,
+  interviews: [],
+  loading: false,
+  error: null,
+  currentId: null,
+  currentName: null,
+  createInterview: () => {},
+  updateInterview: () => {},
+  deleteInterview: () => {},
+  duplicateInterview: () => {},
+  refreshData: () => {}
+});
+
+// Custom hook to use the context
+export const useInterviewData = () => {
+  const context = useContext(InterviewDataContext);
+  if (!context) {
+    throw new Error('useInterviewData must be used within an InterviewDataProvider');
+  }
+  return context;
+};
+
+export const InterviewDataProvider = ({ interviewId, children }) => {
   const [interview, setInterview] = useState(null);
+  const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [currentId, setCurrentId] = useState(interviewId);
+  const [currentName, setCurrentName] = useState(null);
 
-  // Fetch the list of all interviews
+  // When interviewId prop changes, update our state
+  useEffect(() => {
+    setCurrentId(interviewId);
+  }, [interviewId]);
+
+  // Fetch a single interview
+  const fetchInterview = useCallback(async (identifier) => {
+    if (!identifier) return null;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const interviewResponse = await interviewerAPI.getInterview(identifier);
+      
+      if (interviewResponse.data) {
+        // Get questions for this interview
+        try {
+          const questionsResponse = await interviewerAPI.getQuestions(identifier);
+          const sortedQuestions = [...(questionsResponse.data || [])].sort((a, b) => a.order - b.order);
+          
+          const interviewData = {
+            ...interviewResponse.data,
+            questions: sortedQuestions
+          };
+
+          setInterview(interviewData);
+          setCurrentId(interviewData.id);
+          setCurrentName(interviewData.name);
+        } catch (questionsErr) {
+          console.error('Failed to load questions:', questionsErr);
+          setInterview(interviewResponse.data);
+          setCurrentId(interviewResponse.data.id);
+          setCurrentName(interviewResponse.data.name);
+        }
+      } else {
+        setInterview(null);
+        setCurrentId(null);
+        setCurrentName(null);
+      }
+    } catch (err) {
+      console.error(`Failed to load interview ${identifier}:`, err);
+      setError(`Failed to load interview details. Please try again.`);
+      setInterview(null);
+      setCurrentId(null);
+      setCurrentName(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch all interviews
   const fetchInterviews = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
       const response = await interviewerAPI.getAllInterviews();
-      setInterviews(response.data || []);
+      setInterviews(response || []);
     } catch (err) {
-      console.error('Failed to load interviews:', err);
+      console.error('Failed to fetch interviews:', err);
       setError('Failed to load interviews. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch a specific interview by ID with all its questions
-  const fetchInterview = useCallback(async (id) => {
-    if (!id) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const interviewResponse = await interviewerAPI.getInterview(id);
-      
-      // If we need questions too, fetch them
-      if (interviewResponse.data) {
-        try {
-          const questionsResponse = await interviewerAPI.getQuestions(id);
-          const sortedQuestions = [...(questionsResponse.data || [])].sort((a, b) => a.order - b.order);
-          
-          setInterview({
-            ...interviewResponse.data,
-            questions: sortedQuestions
-          });
-        } catch (questionsErr) {
-          console.error('Failed to load questions:', questionsErr);
-          setInterview(interviewResponse.data);
-        }
-      } else {
-        setInterview(null);
-      }
-    } catch (err) {
-      console.error(`Failed to load interview ${id}:`, err);
-      setError(`Failed to load interview details. Please try again.`);
-      setInterview(null);
     } finally {
       setLoading(false);
     }
@@ -74,7 +108,6 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     try {
       const response = await interviewerAPI.createInterview(interviewData);
       
-      // Add the new interview to the list
       if (response.data) {
         setInterviews(prevInterviews => [...prevInterviews, response.data]);
       }
@@ -89,7 +122,7 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     }
   };
 
-  // Update an existing interview
+  // Update an interview
   const updateInterview = async (id, interviewData) => {
     if (!id) return null;
     
@@ -99,8 +132,8 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     try {
       const response = await interviewerAPI.updateInterview(id, interviewData);
       
-      // Update the interview in the list
       if (response.data) {
+        // Update the interview in the list
         setInterviews(prevInterviews => 
           prevInterviews.map(item => 
             item.id === id ? { ...item, ...response.data } : item
@@ -133,14 +166,12 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     try {
       await interviewerAPI.deleteInterview(id);
       
-      // Remove the interview from the list
-      setInterviews(prevInterviews => 
-        prevInterviews.filter(item => item.id !== id)
-      );
+      setInterviews(prevInterviews => prevInterviews.filter(item => item.id !== id));
       
-      // Clear current interview if it's the one being deleted
       if (interview && interview.id === id) {
         setInterview(null);
+        setCurrentId(null);
+        setCurrentName(null);
       }
       
       return true;
@@ -161,14 +192,12 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     setError(null);
     
     try {
-      // First, get the interview to duplicate
       const sourceResponse = await interviewerAPI.getInterview(id);
       
       if (!sourceResponse.data) {
         throw new Error('Source interview not found');
       }
       
-      // Create a new interview with similar data but "Copy of" prefix
       const newInterviewData = {
         title: `Copy of ${sourceResponse.data.title || 'Untitled'}`,
         description: sourceResponse.data.description || ''
@@ -180,16 +209,12 @@ const InterviewDataProvider = ({ children, interviewId }) => {
         throw new Error('Failed to create new interview');
       }
       
-      const newInterviewId = newInterviewResponse.data.id;
-      
-      // Get questions from the source interview
       const questionsResponse = await interviewerAPI.getQuestions(id);
       
-      // Add each question to the new interview
       if (questionsResponse.data && questionsResponse.data.length > 0) {
         for (const question of questionsResponse.data) {
           await interviewerAPI.addQuestion({
-            interviewId: newInterviewId,
+            interviewId: newInterviewResponse.data.id,
             text: question.text,
             preparation_time: question.preparation_time,
             responding_time: question.responding_time
@@ -197,7 +222,6 @@ const InterviewDataProvider = ({ children, interviewId }) => {
         }
       }
       
-      // Add the new interview to the list
       await fetchInterviews();
       
       return newInterviewResponse.data;
@@ -210,16 +234,7 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     }
   };
 
-  // Refresh data based on the current context
-  const refreshData = useCallback(() => {
-    if (interviewId) {
-      fetchInterview(interviewId);
-    } else {
-      fetchInterviews();
-    }
-  }, [interviewId, fetchInterview, fetchInterviews]);
-
-  // Initialize data when component mounts or interviewId changes
+  // Load initial data
   useEffect(() => {
     if (interviewId) {
       fetchInterview(interviewId);
@@ -228,24 +243,25 @@ const InterviewDataProvider = ({ children, interviewId }) => {
     }
   }, [interviewId, fetchInterview, fetchInterviews]);
 
-  // Provide all interview data and operations as a single object
-  const interviewData = {
-    interviews,
+  const contextValue = {
     interview,
+    interviews,
     loading,
     error,
-    setError,
-    refreshData,
+    currentId,
+    currentName,
     createInterview,
     updateInterview,
     deleteInterview,
-    duplicateInterview
+    duplicateInterview,
+    refreshData: fetchInterviews
   };
 
-  // Allow consumers to access the interview data through the children prop
-  return typeof children === 'function' 
-    ? children(interviewData) 
-    : React.cloneElement(children, { interviewData });
+  return (
+    <InterviewDataContext.Provider value={contextValue}>
+      {children}
+    </InterviewDataContext.Provider>
+  );
 };
 
 export default InterviewDataProvider;

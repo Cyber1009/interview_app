@@ -18,8 +18,8 @@ import {
   Logout as LogoutIcon
 } from '@mui/icons-material';
 
-import { BaseLayout } from '../core/layout';
-import { AuthService } from '../../services';
+import { BaseLayout } from '../src/components/core/layout';
+import { AuthService } from '../src/services';
 
 const InterviewerDashboardLayout = ({ children, logo, onThemeChange }) => {
   const navigate = useNavigate();
